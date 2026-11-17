@@ -1,0 +1,6 @@
+{
+  "note": "L4 기준 장면 목록. 기준 이미지는 golden/{site}-{fixture}-{t}-{preset}-{quality}.png. 장면을 더하면 기준 이미지를 만들고 사람이 승인한다.",
+  "shots": [
+    { "site": "shipyard", "fixture": "idle", "t": 1000, "preset": "overview", "quality": "high" }
+  ]
+}

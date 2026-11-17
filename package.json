@@ -1,0 +1,20 @@
+{
+  "name": "welding-hitl",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "gen:types": "node contracts/gen-types.mjs",
+    "twin:check": "digital-twin/harness/check.sh",
+    "twin:shot": "digital-twin/harness/shot.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^20.19.43",
+    "ajv": "^8.20.0",
+    "json-schema-to-typescript": "^16.0.0",
+    "typescript": "^6.0.3"
+  }
+}

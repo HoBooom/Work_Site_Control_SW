@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "task-progress",
+  "title": "TaskProgress",
+  "description": "innoworks/{site}/{cell}/task/progress. 서버→웹, QoS 0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "ts", "task_id", "progress"],
+  "properties": {
+    "v": { "const": 1 },
+    "ts": { "type": "integer", "minimum": 0 },
+    "task_id": { "type": "string" },
+    "progress": { "type": "number", "minimum": 0, "maximum": 1, "description": "경로 길이 기준 완료 비율" }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "task-proposal",
+  "title": "TaskProposal",
+  "description": "innoworks/{site}/{cell}/task/proposal. 서버→웹, QoS 1, retained. AI가 제안한 용접 경로.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "ts", "task_id", "path"],
+  "properties": {
+    "v": { "const": 1 },
+    "ts": { "type": "integer", "minimum": 0 },
+    "task_id": { "type": "string" },
+    "path": {
+      "type": "array",
+      "description": "작업판 좌표(mm) 점 배열, 시작 → 끝",
+      "minItems": 2,
+      "items": {
+        "type": "array",
+        "items": { "type": "number" },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}

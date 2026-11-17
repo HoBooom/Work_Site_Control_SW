@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "task-snap",
+  "title": "TaskSnap",
+  "description": "innoworks/{site}/{cell}/task/snap. 서버→웹, QoS 1. 드래그 경로를 용접선으로 수렴시킨 결과.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "ts", "task_id", "ok", "path"],
+  "properties": {
+    "v": { "const": 1 },
+    "ts": { "type": "integer", "minimum": 0 },
+    "task_id": { "type": "string" },
+    "ok": { "type": "boolean", "description": "false면 수렴 실패. path는 사용자가 그린 경로 그대로" },
+    "path": {
+      "type": "array",
+      "description": "작업판 좌표(mm) 점 배열, 시작 → 끝",
+      "minItems": 2,
+      "items": {
+        "type": "array",
+        "items": { "type": "number" },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    }
+  }
+}

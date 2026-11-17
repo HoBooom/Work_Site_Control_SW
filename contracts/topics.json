@@ -1,0 +1,13 @@
+{
+  "prefix": "innoworks",
+  "note": "셀 토픽은 {prefix}/{site}/{cell}/{suffix}. 스키마가 정해진 토픽만 적는다. 나머지는 정해질 때 추가한다.",
+  "cell_topics": [
+    { "suffix": "robot/state",   "schema": "robot-state",   "dir": "server->web", "qos": 0, "retained": false },
+    { "suffix": "task/state",    "schema": "task-state",    "dir": "server->web", "qos": 1, "retained": true },
+    { "suffix": "task/proposal", "schema": "task-proposal", "dir": "server->web", "qos": 1, "retained": true },
+    { "suffix": "task/snap",     "schema": "task-snap",     "dir": "server->web", "qos": 1, "retained": false },
+    { "suffix": "task/progress", "schema": "task-progress", "dir": "server->web", "qos": 0, "retained": false },
+    { "suffix": "alarm",         "schema": "alarm",         "dir": "server->web", "qos": 1, "retained": false },
+    { "suffix": "status",        "schema": "status",        "dir": "server->web", "qos": 1, "retained": true }
+  ]
+}

@@ -1,0 +1,10 @@
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+body {
+  background: #d9dde2;
+  -webkit-font-smoothing: antialiased;
+}

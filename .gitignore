@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tsbuildinfo
+digital-twin/harness/out/
+test-results/
+playwright-report/
+data/
+.DS_Store

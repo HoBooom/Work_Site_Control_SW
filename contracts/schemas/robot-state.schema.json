@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "robot-state",
+  "title": "RobotState",
+  "description": "innoworks/{site}/{cell}/robot/state. 서버→웹, 10~20Hz, QoS 0. 관절 이름은 로봇 URDF의 joint 이름과 같다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "ts", "joints"],
+  "properties": {
+    "v": { "const": 1, "description": "스키마 버전" },
+    "ts": { "type": "integer", "minimum": 0, "description": "epoch ms" },
+    "joints": {
+      "type": "object",
+      "description": "관절 이름 → 각도(deg)",
+      "minProperties": 1,
+      "additionalProperties": { "type": "number" }
+    }
+  }
+}

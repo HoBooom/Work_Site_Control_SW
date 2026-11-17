@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "site-config",
+  "title": "SiteConfig",
+  "description": "digital-twin/site-config/{site}.json. 웹이 읽는 사이트 설정. 좌표는 사이트 좌표계(USD와 같음: Z-up, m, 회전 deg). 셀의 위치·회전은 USD에서 생성한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "site",
+    "name",
+    "background",
+    "cells",
+    "presets"
+  ],
+  "definitions": {
+    "vec3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "title": "Vec3"
+    },
+    "kebab": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "title": "KebabId"
+    },
+    "pose": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "position_m",
+        "yaw_deg"
+      ],
+      "properties": {
+        "position_m": {
+          "$ref": "#/definitions/vec3"
+        },
+        "yaw_deg": {
+          "type": "number",
+          "description": "Z축 회전(deg). position_m은 위치(m)"
+        }
+      },
+      "title": "Pose",
+      "description": "부모 좌표계 기준 자세. 셀은 사이트 기준, 작업판(원점 모서리, 윗면 높이)과 로봇 베이스는 셀 기준"
+    }
+  },
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "site": {
+      "$ref": "#/definitions/kebab"
+    },
+    "name": {
+      "type": "string"
+    },
+    "background": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "glb"
+      ],
+      "properties": {
+        "glb": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "배경 GLB 경로(public 기준). 에셋이 없으면 null"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hdri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exposure": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "cells": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "pose",
+          "plate",
+          "robot"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/kebab"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pose": {
+            "$ref": "#/definitions/pose"
+          },
+          "plate": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "size_mm",
+              "pose"
+            ],
+            "properties": {
+              "size_mm": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[가로 X, 세로 Y]"
+              },
+              "pose": {
+                "$ref": "#/definitions/pose"
+              }
+            }
+          },
+          "robot": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "urdf",
+              "pose"
+            ],
+            "properties": {
+              "urdf": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "URDF 경로(public 기준). 준비 전이면 null"
+              },
+              "pose": {
+                "$ref": "#/definitions/pose"
+              }
+            }
+          },
+          "camera": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "stream": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "MJPEG 주소"
+              }
+            }
+          }
+        }
+      },
+      "description": "셀 id는 토픽의 {cell}, site는 토픽의 {site}와 같다"
+    },
+    "presets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "eye_m",
+          "target_m"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/kebab"
+          },
+          "name": {
+            "type": "string"
+          },
+          "eye_m": {
+            "$ref": "#/definitions/vec3"
+          },
+          "target_m": {
+            "$ref": "#/definitions/vec3"
+          }
+        }
+      }
+    }
+  }
+}

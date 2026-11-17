@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "task-state",
+  "title": "TaskState",
+  "description": "innoworks/{site}/{cell}/task/state. 서버→웹, QoS 1, retained. 상태 이름은 초안이며 서버 상태 머신 문서에서 확정한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "ts", "state", "task_id"],
+  "properties": {
+    "v": { "const": 1 },
+    "ts": { "type": "integer", "minimum": 0 },
+    "state": {
+      "type": "string",
+      "enum": ["idle", "proposed", "editing", "running", "completed", "paused", "estopped"],
+      "description": "idle 대기, proposed 승인 대기, editing 수정 중, running 실행 중, completed 확인 대기, paused 일시정지, estopped 긴급정지"
+    },
+    "task_id": { "type": ["string", "null"], "description": "서버가 발급. idle이면 null" }
+  }
+}
