@@ -6,6 +6,8 @@ describe('parseLabParams', () => {
     expect(parseLabParams('')).toEqual({
       site: null,
       fixture: null,
+      source: 'fixture',
+      broker: null,
       t: 0,
       preset: null,
       quality: null,
@@ -25,6 +27,8 @@ describe('parseLabParams', () => {
       quality: 'low',
       freeze: true,
       hud: false,
+      source: 'fixture',
+      broker: null,
     });
   });
 

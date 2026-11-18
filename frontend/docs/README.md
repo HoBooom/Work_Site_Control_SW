@@ -19,8 +19,8 @@
 
 ```
 frontend/src/
-├─ app/       라우팅, 레이아웃, 사이트 설정 로딩
-├─ bus/       MQTT 연결·재연결, 구독, 발행, 메시지 타입(contracts에서 생성)
+├─ app/       관제 웹앱(/): 브로커에 붙은 실시간 트윈 + 연결 상태. 사이드 패널은 서버 단계에서
+├─ bus/       MQTT 연결·재연결, 구독, 계약 스키마 검증(mqtt-bus.ts, validate.ts). 발행(cmd/*)은 서버 단계에서
 ├─ store/     Zustand. 셀별 상태(task, joints, alarms, metrics, 연결 상태)
 ├─ scene/     R3F 씬: 배경 GLB, 로봇(URDF), 작업판, 용접선, 마커, 카메라 프리셋, 선택
 ├─ lab/       트윈 랩: 씬만 띄우는 개발용 화면, 픽스처 재생기, window.__twin. 로봇 랩(/lab/robot): 로봇 하나와 관절 슬라이더

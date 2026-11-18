@@ -43,18 +43,22 @@ docs/           adr/ (구획을 넘는 설계 결정만)
 
 ## 실행 (맥, Mock)
 
-디지털 트윈 우선 개발 중(M0 완료). 지금 동작하는 명령:
+디지털 트윈 M0~M5 완료(ADR 0003 이동 로봇, ADR 0004 MQTT). 지금 동작하는 명령:
 
 ```
 npm install                                   # 저장소 루트에서 한 번
-npm run dev -w frontend                       # http://localhost:5173/lab  트윈 랩
+npm run dev                                   # infra/dev.sh: MQTT 브로커(aedes, 1883/9001) + 프론트
+npm run dev -- ship-block-weld                # 위에 더해 픽스처를 브로커로 반복 재생(서버 대신)
+npm run play -- <픽스처> [--speed 2]           # 픽스처 한 번 재생(브로커가 떠 있어야 한다)
+npm run dev -w frontend                       # 프론트만(픽스처 트윈 랩)
 digital-twin/harness/check.sh                 # 트윈 검사 L0~L4 (/twin-check)
 digital-twin/harness/shot.sh "<랩 주소 인자>"   # 장면 한 장 (/twin-shot)
 ```
 
+화면: 관제 `http://localhost:5173/?site=ship-block`(브로커), 트윈 랩 `/lab`(픽스처) 또는 `/lab?site=ship-block&source=mqtt`(브로커), 로봇 랩 `/lab/robot`.
+
 나중에 생길 명령:
 
 ```
-infra/dev.sh          # mosquitto + server(--mock vision,robot,camera) + frontend dev
-tools/play.py <시나리오>   # 연동 안 된 사이트에 녹화 데이터 재생
+infra/dev.sh          # 위에 server(--mock vision,robot,camera)를 더한다
 ```

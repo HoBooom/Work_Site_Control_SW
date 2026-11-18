@@ -50,7 +50,7 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 
 - `t`는 시나리오 시작부터의 ms다.
 - `payload`는 `contracts/schemas/`의 스키마를 통과해야 한다(L0에서 검사).
-- 같은 파일을 `tools/play.py`가 브로커로 재생한다. 트윈 랩용과 통합 테스트용을 따로 만들지 않는다.
+- 같은 파일을 `tools/play.mjs`가 브로커로 재생한다(M5, ADR 0004). 트윈 랩용과 통합 테스트용을 따로 만들지 않는다. `e2e/mqtt.spec.ts`가 브로커 재생 상태와 픽스처 재생 상태가 같은지 본다.
 
 기본 픽스처.
 
@@ -77,6 +77,9 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 `shot.sh "robot?robot=spider-welder&mount=wall"`로 한 장 찍는다.
 
 ## 트윈 랩
+
+실시간 모드(M5): `/lab?site=ship-block&source=mqtt&broker=ws://localhost:9001`. store를 픽스처 대신 MQTT bus가 채우고, 시계는 실제 경과 시간이라 `setClock`은 쓸 수 없다. `window.__twin.state()`의 `source`, `bus`(연결 상태, 받은 수, 버린 수)로 확인한다.
+
 
 사이드 패널 없이 씬만 띄우는 화면이다. 주소의 인자로 상태를 고정한다.
 

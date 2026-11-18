@@ -8,13 +8,19 @@
   "scripts": {
     "gen:types": "node contracts/gen-types.mjs",
     "twin:check": "digital-twin/harness/check.sh",
-    "twin:shot": "digital-twin/harness/shot.sh"
+    "twin:shot": "digital-twin/harness/shot.sh",
+    "dev": "infra/dev.sh",
+    "broker": "node infra/broker.mjs",
+    "play": "node tools/play.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",
     "@types/node": "^20.19.43",
+    "aedes": "1.2.0",
     "ajv": "^8.20.0",
     "json-schema-to-typescript": "^16.0.0",
-    "typescript": "^6.0.3"
+    "mqtt": "5.16.1",
+    "typescript": "^6.0.3",
+    "ws": "8.22.1"
   }
 }

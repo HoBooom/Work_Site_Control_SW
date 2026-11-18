@@ -5,8 +5,8 @@ import type { SeamView } from '../scene/cell-view';
 import { alarmName, labelTestId, objectName, staleTestId, type ScenePart } from '../scene/names';
 import { useSelection, type Selection } from '../scene/selection';
 import { useTwinStore, type CellState } from '../store/twin-store';
-import type { VirtualClock } from './clock';
-import type { FixturePlayer } from './fixture';
+import type { BusStats } from '../bus/mqtt-bus';
+import type { LabClock } from './clock';
 import type { QualityTier } from './params';
 import type { StatsCollector, StatsSnapshot } from './stats';
 
@@ -52,6 +52,10 @@ export interface TwinDebugApi {
 export interface TwinLabState {
   site: string | null;
   fixture: string | null;
+  /** M5: 상태를 채우는 쪽 */
+  source: 'fixture' | 'mqtt';
+  /** 실시간 모드의 bus 상태(연결, 받은 수, 버린 수) */
+  bus: BusStats | null;
   t: number;
   frozen: boolean;
   cells: Record<string, CellState>;
@@ -116,10 +120,14 @@ export interface CameraInfo {
 
 interface Bound {
   site: string;
-  fixture: string;
-  clock: VirtualClock;
-  player: FixturePlayer;
+  /** 픽스처 모드의 픽스처 이름. 실시간(MQTT) 모드는 null */
+  fixture: string | null;
+  clock: LabClock;
+  /** 픽스처 재생기. 실시간 모드는 아무것도 하지 않는다 */
+  player: { seek(t: number): void };
   stats: StatsCollector;
+  /** 실시간 모드의 bus 상태 */
+  bus?: () => BusStats | null;
 }
 
 declare global {
@@ -228,6 +236,8 @@ export function installDebugApi() {
     state: () => ({
       site: bound?.site ?? null,
       fixture: bound?.fixture ?? null,
+      source: bound?.bus ? 'mqtt' : 'fixture',
+      bus: bound?.bus?.() ?? null,
       t: bound?.clock.t ?? 0,
       frozen: bound?.clock.frozen ?? false,
       cells: structuredClone(useTwinStore.getState().cells),

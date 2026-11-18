@@ -10,7 +10,8 @@ import { TwinTimeContext } from '../scene/time';
 import { LoadingOverlay } from '../scene/ui/LoadingOverlay';
 import { SceneErrorBoundary } from '../scene/ui/SceneErrorBoundary';
 import { useTwinStore } from '../store/twin-store';
-import { VirtualClock } from './clock';
+import { LiveClock, VirtualClock, type LabClock } from './clock';
+import { connectBus, defaultBrokerUrl, type Bus } from '../bus/mqtt-bus';
 import { bindDebugApi, bindLabControls, bindThree, installDebugApi, markFailed, markMounted, onFrame } from './debug-api';
 import { FixturePlayer, type FixtureLine } from './fixture';
 import { listFixtures, loadFixture } from './fixture-files';
@@ -25,8 +26,8 @@ const READY_AFTER_FRAMES = 3;
 interface Loaded {
   params: LabParams;
   site: string;
-  /** 쓰는 픽스처 이름(인자가 없으면 `{site}-idle`) */
-  fixture: string;
+  /** 쓰는 픽스처 이름(인자가 없으면 `{site}-idle`). 실시간(MQTT) 모드는 null */
+  fixture: string | null;
   config: SiteConfig;
   lines: FixtureLine[];
 }
@@ -41,6 +42,12 @@ async function load(search: string): Promise<Loaded> {
   const params = parseLabParams(search);
   const site = params.site ?? listSites()[0];
   if (!site) throw new Error('site-config가 하나도 없다');
+  if (params.source === 'mqtt') {
+    // M5: 상태는 브로커에서 온다. 픽스처를 읽지 않는다
+    const config = await loadSiteConfig(site);
+    checkPreset(config, params.preset ?? config.presets[0].id);
+    return { params, site, fixture: null, config, lines: [] };
+  }
   const fixture = params.fixture ?? (listFixtures().includes(`${site}-idle`) ? `${site}-idle` : listFixtures()[0]);
   if (!fixture) throw new Error('픽스처가 하나도 없다');
   const [config, lines] = await Promise.all([loadSiteConfig(site), loadFixture(fixture)]);
@@ -98,19 +105,42 @@ function LabView({ loaded }: { loaded: Loaded }) {
     mount: 0,
   }));
 
+  const live = params.source === 'mqtt';
   const rig = useMemo(() => {
     const store = useTwinStore.getState();
     store.reset();
-    const clock = new VirtualClock(params.t, params.freeze);
-    const player = new FixturePlayer(lines, store);
+    const clock: LabClock = live ? new LiveClock() : new VirtualClock(params.t, params.freeze);
+    const player = live ? { seek: () => {} } : new FixturePlayer(lines, store);
     player.seek(params.t);
     const stats = new StatsCollector();
     return { clock, player, stats };
-  }, [params, lines]);
+  }, [params, lines, live]);
+
+  // M5: 실시간 모드는 브로커를 구독해 store를 채운다. 수신 시각은 랩 시계(=씬의 지금)와 같은 시계
+  const bus = useRef<Bus | null>(null);
+  useEffect(() => {
+    if (!live) return;
+    let b: Bus | null = null;
+    // 한 틱 늦게 붙는다: StrictMode의 즉시 unmount·mount에서 열자마자 닫는 웹소켓(브라우저 경고)을 만들지 않는다
+    const timer = setTimeout(() => {
+      b = connectBus({
+        url: params.broker ?? defaultBrokerUrl(),
+        site: view.site,
+        apply: (topic, payload, at) => useTwinStore.getState().apply(topic, payload, at),
+        now: () => rig.clock.t,
+      });
+      bus.current = b;
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      bus.current = null;
+      void b?.close();
+    };
+  }, [live, params.broker, view.site, rig]);
 
   useEffect(() => {
-    bindDebugApi({ site: view.site, fixture: loaded.fixture, ...rig });
-  }, [rig, view.site, loaded.fixture]);
+    bindDebugApi({ site: view.site, fixture: loaded.fixture, ...rig, bus: live ? () => bus.current?.stats() ?? null : undefined });
+  }, [rig, view.site, loaded.fixture, live]);
 
   const setPreset = useCallback((preset: string) => {
     setView((v) => {
@@ -130,7 +160,8 @@ function LabView({ loaded }: { loaded: Loaded }) {
 
   const now = useMemo(() => () => rig.clock.t, [rig]);
   const quality = QUALITY[view.quality];
-  const label = `${view.site} · ${loaded.fixture} · ${view.preset} · ${view.quality}`;
+  const source = live ? `mqtt ${params.broker ?? defaultBrokerUrl()}` : loaded.fixture;
+  const label = `${view.site} · ${source} · ${view.preset} · ${view.quality}`;
   return (
     <div style={styles.root}>
       <SceneErrorBoundary onError={fail}>
@@ -160,8 +191,8 @@ function LabView({ loaded }: { loaded: Loaded }) {
 }
 
 interface ProbeProps {
-  clock: VirtualClock;
-  player: FixturePlayer;
+  clock: LabClock;
+  player: { seek(t: number): void };
   stats: StatsCollector;
   mount: number;
   hudRef: RefObject<HTMLDivElement | null>;

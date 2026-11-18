@@ -50,6 +50,8 @@ innoworks/{site}/{cell}/cmd/{이름}        웹→서버  edit_start, drag, appr
 innoworks/operator/{client_id}/heartbeat 웹→서버  1초마다, QoS 0
 ```
 
+- 브로커: 엣지는 mosquitto(`infra/mosquitto.conf`), 맥 개발·검사는 aedes(`infra/broker.mjs`). 서버·도구는 TCP 1883, 브라우저는 WebSocket 9001(ADR 0004).
+- 웹(bus)은 받은 payload를 이 폴더의 스키마로 검사하고, 틀린 메시지는 경고하고 버린다.
 - 상태처럼 "지금 값"이 중요한 것은 retained, 명령과 이벤트는 retained 금지.
 - 명령은 요청일 뿐이다. 결과는 항상 `task/state`나 `alarm`으로 돌아온다.
 
