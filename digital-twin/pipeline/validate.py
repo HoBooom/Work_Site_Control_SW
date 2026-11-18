@@ -75,11 +75,13 @@ def validate_site(site: str) -> list[str]:
         if why:
             err(path, f"셀 자세: {why}")
 
+        # Plate는 고정 로봇 셀만 갖는다. 이동 로봇 셀은 Plate 없이 surfaces 위에서 일한다(ADR 0003)
         for child, child_role in (("Robot", "robot"), ("Plate", "plate")):
             p = cell.GetChild(child)
             cpath = f"{path}/{child}"
             if not p:
-                err(cpath, "없다")
+                if child == "Robot":
+                    err(cpath, "없다")
                 continue
             if tu.role(p) != child_role:
                 err(cpath, f'customData "innoworks:role" = "{child_role}"가 없다')
@@ -103,6 +105,29 @@ def validate_site(site: str) -> list[str]:
             size = plate.GetAttribute("innoworks:sizeMm").Get()
             if size is None or len(size) != 2 or min(size) <= 0:
                 err(f"{path}/Plate", "innoworks:sizeMm(float2, 양수)가 없다")
+
+    # 강판 면(surfaces): 용접선이 놓이는 면. 기준점만 두고 형상은 갖지 않는다
+    sids: set[str] = set()
+    for s in tu.surfaces(stage):
+        spath = str(s.GetPath())
+        sid = tu.pascal_to_kebab(s.GetName())
+        if tu.kebab_to_pascal(sid) != s.GetName() or not tu.is_kebab(sid):
+            err(spath, f"면 이름이 PascalCase ↔ kebab-case로 왕복되지 않는다({sid})")
+        if sid in sids:
+            err(spath, f"면 id 중복: {sid}")
+        sids.add(sid)
+        if any(spath.startswith(str(c.GetPath()) + "/") for c in cells):
+            err(spath, "면은 셀 밖(사이트에 고정된 구조물)에 둔다")
+        if tu.has_geometry(s):
+            err(spath, "형상을 가지면 안 된다. 기준점만 둔다")
+        if not s.GetAttribute("innoworks:name").Get():
+            err(spath, "innoworks:name이 없다")
+        size = s.GetAttribute("innoworks:sizeMm").Get()
+        if size is None or len(size) != 2 or min(size) <= 0:
+            err(spath, "innoworks:sizeMm(float2, 양수)가 없다")
+        _, why = tu.site_pose(s)
+        if why:
+            err(spath, f"자세: {why}")
     return errs
 
 

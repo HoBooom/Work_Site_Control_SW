@@ -41,6 +41,18 @@
       "fixture": "factory-weld-basic",
       "preset": "overview",
       "quality": "low"
+    },
+    {
+      "site": "ship-block",
+      "fixture": "ship-block-weld",
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "ship-block",
+      "fixture": "ship-block-weld",
+      "preset": "overview",
+      "quality": "low"
     }
   ]
 }

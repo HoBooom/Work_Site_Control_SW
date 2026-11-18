@@ -124,6 +124,52 @@ def catmull_rom(points, samples_per_seg: int = 8) -> np.ndarray:
     return np.array(out)
 
 
+def plate_with_hole(w: float, h: float, t: float, hole_c, hole_r, seg: int = 40) -> Mesh:
+    """구멍(타원) 뚫린 판. 판 평면 = XZ(가로 X: -w/2~w/2, 세로 Z: 0~h), 두께 Y(-t/2~t/2).
+    hole_c = (x, z) 구멍 중심, hole_r = (가로 반경, 세로 반경). 늑판·거더의 맨홀(경량 구멍)에 쓴다.
+
+    구멍 둘레 점마다 중심에서 바깥 사각형으로 쏜 반직선의 끝점과 잇는다. 사각형 네 모서리 방향을 각도에 넣어
+    바깥 테두리가 사각형과 정확히 같게 한다."""
+    cx, cz = hole_c
+    a, b = hole_r
+    hw = w / 2
+    if not (-hw < cx - a and cx + a < hw and 0 < cz - b and cz + b < h):
+        raise ValueError("구멍이 판 밖으로 나간다")
+    corners = [math.atan2(zc - cz, xc - cx) % (2 * math.pi) for xc, zc in ((hw, 0), (hw, h), (-hw, h), (-hw, 0))]
+    angles = sorted(set([2 * math.pi * i / seg for i in range(seg)] + corners))
+
+    def ray(th: float):
+        dx, dz = math.cos(th), math.sin(th)
+        ts = []
+        if dx > 1e-12:
+            ts.append((hw - cx) / dx)
+        if dx < -1e-12:
+            ts.append((-hw - cx) / dx)
+        if dz > 1e-12:
+            ts.append((h - cz) / dz)
+        if dz < -1e-12:
+            ts.append((0 - cz) / dz)
+        k = min(x for x in ts if x > 0)
+        return cx + k * dx, cz + k * dz
+
+    n = len(angles)
+    inner = [(cx + a * math.cos(th), cz + b * math.sin(th)) for th in angles]
+    outer = [ray(th) for th in angles]
+    V: list[tuple[float, float, float]] = []
+    for ring in (inner, outer):
+        for y in (t / 2, -t / 2):
+            V += [(x, y, z) for x, z in ring]
+    fi, bi, fo, bo = 0, n, 2 * n, 3 * n  # 앞(+y)·뒤 안쪽, 앞·뒤 바깥 시작 번호
+    F = []
+    for i in range(n):
+        j = (i + 1) % n
+        F += [(fi + i, fo + i, fo + j), (fi + i, fo + j, fi + j)]  # 앞면
+        F += [(bi + i, bo + j, bo + i), (bi + i, bi + j, bo + j)]  # 뒷면
+        F += [(fi + i, fi + j, bi + j), (fi + i, bi + j, bi + i)]  # 구멍 안벽
+        F += [(fo + i, bo + i, bo + j), (fo + i, bo + j, fo + j)]  # 바깥 테두리
+    return _orient(np.array(V, dtype=np.float64), np.array(F, dtype=np.int64))
+
+
 # 변환
 def move(m: Mesh, t) -> Mesh:
     return m[0] + np.asarray(t, dtype=np.float64), m[1]
@@ -145,6 +191,8 @@ class Model:
 
     def __init__(self) -> None:
         self.parts: dict[str, list[Mesh]] = {}
+        # 형상 없는 기준점(강판 면 등). make_assets.to_usda가 prim으로 쓴다
+        self.anchors: list[dict] = []
 
     def add(self, material: str, *meshes: Mesh) -> "Model":
         self.parts.setdefault(material, []).extend(meshes)

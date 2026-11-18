@@ -14,8 +14,7 @@ const IGNORED: RegExp[] = [
   /THREE\.Clock: This module has been deprecated/,
 ];
 
-/** 트윈 랩을 열고 ready()까지 기다린다. */
-export async function openLab(page: Page, query: string): Promise<LabSession> {
+function watchConsole(page: Page): string[] {
   const problems: string[] = [];
   page.on('console', (m: ConsoleMessage) => {
     if (m.type() !== 'error' && m.type() !== 'warning') return;
@@ -23,10 +22,27 @@ export async function openLab(page: Page, query: string): Promise<LabSession> {
     problems.push(`[${m.type()}] ${m.text()}`);
   });
   page.on('pageerror', (e) => problems.push(`[pageerror] ${e.message}`));
+  return problems;
+}
 
+/** 트윈 랩을 열고 ready()까지 기다린다. */
+export async function openLab(page: Page, query: string): Promise<LabSession> {
+  const problems = watchConsole(page);
   await page.goto(`/lab?${query}`);
   await page.waitForFunction(() => !!window.__twin);
   await page.evaluate(() => window.__twin!.ready());
+  return {
+    problems,
+    expectClean: () => expect(problems, '콘솔 오류·경고가 없어야 한다').toEqual([]),
+  };
+}
+
+/** 로봇 랩(/lab/robot)을 열고 ready()까지 기다린다. */
+export async function openRobotLab(page: Page, query: string): Promise<LabSession> {
+  const problems = watchConsole(page);
+  await page.goto(`/lab/robot?${query}`);
+  await page.waitForFunction(() => !!window.__robotLab);
+  await page.evaluate(() => window.__robotLab!.ready());
   return {
     problems,
     expectClean: () => expect(problems, '콘솔 오류·경고가 없어야 한다').toEqual([]),

@@ -54,7 +54,7 @@ site-config  sites.shipyard.cells["weld-cell-1"]
 
 ## 파이프라인
 
-1. 에셋 만들기: `assets/gen/make_assets.py`(소품·배경 USD), `assets/gen/make_robot.py`(대역 로봇 STL+URDF)가 절차적 형상(meshkit: 둥근 상자, 회전체, 관)으로 만든다. 생성 파일은 손으로 고치지 않는다. 나중에 Blender 등에서 만든 USD로 바꿔도 된다(재질은 라이브러리 이름만 쓴다).
+1. 에셋 만들기: `assets/gen/make_assets.py`(소품·배경 USD), `assets/gen/make_robot.py`(로봇 STL+URDF: 고정형 대역 `standin-6axis`, 4족 자석발 이동 용접 로봇 대역 `spider-welder`(`spider.py`, ADR 0003))가 절차적 형상(meshkit: 둥근 상자, 회전체, 관)으로 만든다. 생성 파일은 손으로 고치지 않는다. 나중에 Blender 등에서 만든 USD로 바꿔도 된다(재질은 라이브러리 이름만 쓴다).
 2. `sites/{site}.usda`에서 에셋을 reference로 조립한다. 셀의 Robot·Plate는 기준점만 둔다.
 3. `validate.py`: 규칙 검증(축, 단위, prim 이름, 셀 구조, 자세는 이동+Z회전만, 지원 형상)
 4. `build.py`: usd-core + numpy로 배경 GLB를 직접 쓴다 → `frontend/public/sites/`. Blender가 필요 없고 결정적이다(ADR 0002).
@@ -67,6 +67,17 @@ uv run --project digital-twin/pipeline python digital-twin/pipeline/build.py   #
 
 site-config의 셀 좌표는 손으로 고치지 않는다. USD를 고치고 다시 빌드한다. `environment`, `presets`만 site-config에서 직접 고친다.
 `build.py`는 기존 프리셋을 그대로 두고, 클로즈업 프리셋이 없는 셀에만 셀 자세(회전 포함)에서 계산한 클로즈업을 더한다(id = 셀 id). 프리셋이 하나도 없으면 전경도 만든다.
+
+## 사이트
+
+| 사이트 | 내용 | 로봇 |
+| --- | --- | --- |
+| `shipyard` | 조선소 블록 용접 구역(고정 셀 2개, M1~M3) | 고정형 대역 6축 |
+| `factory` | 제조공장 용접 부스 1개(M4) | 고정형 대역 6축 |
+| `ship-block` | 조선소 이중저 블록 내부(ADR 0003). 외판·론지·늑판·거더·측면 외판, 면 2개(`bottom-shell`, `side-shell`) | 4족 자석발 이동 용접 로봇 2대 |
+
+이동 로봇 사이트는 셀에 `Plate`를 두지 않는다. 셀 자세는 대기 위치이고, 움직이는 동안은 `robot/state.base`가 자세를 준다.
+용접선이 놓이는 면은 에셋 생성기가 형상과 같은 숫자로 `Surfaces/*` 기준점(role `surface`, `innoworks:sizeMm`, 회전 허용)을 쓰고, `build.py`가 site-config `surfaces`로 옮긴다.
 
 ## 사이트 추가하기 (M4에서 공장으로 확인)
 

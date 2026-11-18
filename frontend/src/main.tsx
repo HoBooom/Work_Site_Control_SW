@@ -4,13 +4,15 @@ import { App } from './app/App';
 import './index.css';
 
 const Lab = lazy(() => import('./lab/Lab'));
-const isLab = window.location.pathname.replace(/\/$/, '') === '/lab';
+const RobotLab = lazy(() => import('./lab/RobotLab'));
+const path = window.location.pathname.replace(/\/$/, '');
+const LabPage = path === '/lab' ? Lab : path === '/lab/robot' ? RobotLab : null;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isLab ? (
+    {LabPage ? (
       <Suspense fallback={null}>
-        <Lab />
+        <LabPage />
       </Suspense>
     ) : (
       <App />

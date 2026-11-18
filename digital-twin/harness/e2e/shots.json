@@ -60,6 +60,41 @@
       "t": 4000,
       "preset": "weld-booth-1",
       "quality": "high"
+    },
+    {
+      "site": "ship-block",
+      "fixture": "ship-block-idle",
+      "t": 1000,
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "ship-block",
+      "fixture": "ship-block-weld",
+      "t": 2000,
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "ship-block",
+      "fixture": "ship-block-weld",
+      "t": 8000,
+      "preset": "spider-1",
+      "quality": "high"
+    },
+    {
+      "site": "ship-block",
+      "fixture": "ship-block-weld",
+      "t": 8000,
+      "preset": "spider-2",
+      "quality": "high"
+    },
+    {
+      "site": "ship-block",
+      "fixture": "ship-block-weld",
+      "t": 2850,
+      "preset": "spider-1",
+      "quality": "high"
     }
   ]
 }

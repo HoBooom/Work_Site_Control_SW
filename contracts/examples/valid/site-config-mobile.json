@@ -1,0 +1,100 @@
+{
+  "schema": "site-config",
+  "why": "이동 로봇 1대(작업판 없음)와 강판 면 2개(바닥판, 수직 외판)",
+  "payload": {
+    "v": 1,
+    "site": "block-a",
+    "name": "블록 A",
+    "background": {
+      "glb": null
+    },
+    "surfaces": [
+      {
+        "id": "inner-bottom",
+        "name": "내저판",
+        "size_mm": [
+          6000,
+          3000
+        ],
+        "pose": {
+          "position_m": [
+            0,
+            0,
+            0
+          ],
+          "orientation_xyzw": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      {
+        "id": "side-shell",
+        "name": "외판",
+        "size_mm": [
+          6000,
+          2500
+        ],
+        "pose": {
+          "position_m": [
+            0,
+            3,
+            0
+          ],
+          "orientation_xyzw": [
+            0.7071068,
+            0,
+            0,
+            0.7071068
+          ]
+        }
+      }
+    ],
+    "cells": [
+      {
+        "id": "spider-1",
+        "name": "스파이더 1",
+        "pose": {
+          "position_m": [
+            1,
+            1,
+            0
+          ],
+          "yaw_deg": 0
+        },
+        "robot": {
+          "urdf": "/robots/spider-welder/robot.urdf",
+          "pose": {
+            "position_m": [
+              0,
+              0,
+              0.14
+            ],
+            "yaw_deg": 0
+          }
+        },
+        "camera": {
+          "stream": "/stream/spider-1"
+        }
+      }
+    ],
+    "presets": [
+      {
+        "id": "overview",
+        "name": "전경",
+        "eye_m": [
+          -5,
+          -5,
+          5
+        ],
+        "target_m": [
+          1,
+          1,
+          0.5
+        ]
+      }
+    ]
+  }
+}

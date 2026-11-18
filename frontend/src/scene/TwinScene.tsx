@@ -29,7 +29,7 @@ export function TwinScene({ config, preset, tier }: Props) {
       {config.background.glb && <Background site={config.site} url={config.background.glb} />}
       <group name={`site:${config.site}`} rotation-x={SITE_TO_SCENE_ROTATION_X}>
         {config.cells.map((c) => (
-          <Cell key={c.id} site={config.site} cell={c} />
+          <Cell key={c.id} site={config.site} cell={c} surfaces={config.surfaces} />
         ))}
       </group>
       <Effects quality={quality} tier={tier} />

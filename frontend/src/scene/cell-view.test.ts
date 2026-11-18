@@ -20,6 +20,8 @@ const cell = (over: Partial<CellState> = {}): CellState => ({
   joints: null,
   jointsTs: null,
   jointSamples: [],
+  base: null,
+  contacts: null,
   task: null,
   proposal: null,
   snap: null,

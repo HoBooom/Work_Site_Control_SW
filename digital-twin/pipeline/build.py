@@ -7,7 +7,7 @@
 - frontend/public/sites/{site}.glb      배경(정적 층)
 - digital-twin/site-config/{site}.json  cells, background, name은 USD에서 생성. environment, presets는 기존 파일 값을 유지.
                                         프리셋이 없는 셀에는 셀 자세에서 계산한 클로즈업을 더한다(id = 셀 id)
-- frontend/public/robots/{이름}/         digital-twin/assets/robot/{이름}/ 복사
+- frontend/public/robots/{이름}/         digital-twin/assets/robot/{이름}/ 복사(사이트가 아직 안 쓰는 로봇도. 로봇 랩 /lab/robot에서 본다)
 """
 from __future__ import annotations
 
@@ -64,25 +64,37 @@ def site_config(site: str, stage, previous: dict | None) -> dict:
         pose, _ = tu.local_pose(cell)
         robot, plate = cell.GetChild("Robot"), cell.GetChild("Plate")
         rpose, _ = tu.local_pose(robot)
-        ppose, _ = tu.local_pose(plate)
-        size = plate.GetAttribute("innoworks:sizeMm").Get()
-        cells.append(
+        entry = {"id": cid, "name": cell.GetAttribute("innoworks:name").Get(), "pose": pose.to_json()}
+        if plate:  # 고정 로봇 셀만. 이동 로봇 셀은 작업판이 없다(ADR 0003)
+            ppose, _ = tu.local_pose(plate)
+            size = plate.GetAttribute("innoworks:sizeMm").Get()
+            entry["plate"] = {"size_mm": [tu._num(size[0]), tu._num(size[1])], "pose": ppose.to_json()}
+        entry["robot"] = {"urdf": robot.GetAttribute("innoworks:urdf").Get(), "pose": rpose.to_json()}
+        entry["camera"] = {"stream": f"/stream/{cid}"}
+        cells.append(entry)
+    surfaces = []
+    for s in tu.surfaces(stage):
+        spose, _ = tu.site_pose(s)
+        size = s.GetAttribute("innoworks:sizeMm").Get()
+        surfaces.append(
             {
-                "id": cid,
-                "name": cell.GetAttribute("innoworks:name").Get(),
-                "pose": pose.to_json(),
-                "plate": {"size_mm": [tu._num(size[0]), tu._num(size[1])], "pose": ppose.to_json()},
-                "robot": {"urdf": robot.GetAttribute("innoworks:urdf").Get(), "pose": rpose.to_json()},
-                "camera": {"stream": f"/stream/{cid}"},
+                "id": tu.pascal_to_kebab(s.GetName()),
+                "name": s.GetAttribute("innoworks:name").Get(),
+                "size_mm": [tu._num(size[0]), tu._num(size[1])],
+                "pose": spose.to_json(),
             }
         )
     prev = previous or {}
-    return {
+    out = {
         "v": 1,
         "site": site,
         "name": root.GetAttribute("innoworks:name").Get() or prev.get("name", site),
         "background": {"glb": f"/sites/{site}.glb"},
         "environment": prev.get("environment", {"hdri": None, "exposure": 1}),
+    }
+    if surfaces:
+        out["surfaces"] = surfaces
+    return out | {
         "cells": cells,
         "presets": presets(cells, prev.get("presets")),
     }
@@ -100,9 +112,14 @@ def dump_json(obj: dict) -> str:
 
 
 def robot_files(urdfs: set[str]) -> dict[Path, bytes]:
+    """사이트가 쓰는 로봇(urdfs)과 assets/robot/의 모든 로봇을 복사한다. 사이트가 쓰는데 원본이 없으면 실패한다."""
     out: dict[Path, bytes] = {}
-    for urdf in sorted(urdfs):
-        name = urdf.removeprefix("/robots/").split("/")[0]
+    used = {u.removeprefix("/robots/").split("/")[0] for u in urdfs}
+    missing = [n for n in sorted(used) if not (ROBOT_SRC / n / "robot.urdf").exists()]
+    if missing:
+        raise SystemExit(f"사이트가 쓰는 로봇 원본이 없다: {', '.join(missing)}")
+    names = used | {p.parent.name for p in ROBOT_SRC.glob("*/robot.urdf")}
+    for name in sorted(names):
         src = ROBOT_SRC / name
         for f in sorted(p for p in src.rglob("*") if p.is_file()):
             out[PUBLIC / "robots" / name / f.relative_to(src)] = f.read_bytes()

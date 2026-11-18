@@ -5,22 +5,45 @@
   "description": "innoworks/{site}/{cell}/task/proposal. 서버→웹, QoS 1, retained. AI가 제안한 용접 경로.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["v", "ts", "task_id", "path"],
+  "required": [
+    "v",
+    "ts",
+    "task_id",
+    "path"
+  ],
   "properties": {
-    "v": { "const": 1 },
-    "ts": { "type": "integer", "minimum": 0 },
-    "task_id": { "type": "string" },
+    "v": {
+      "const": 1
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "task_id": {
+      "type": "string"
+    },
+    "surface": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "경로가 놓인 site-config surfaces의 id. 이동 로봇은 꼭 적는다. 없으면 셀의 작업판(고정 로봇)"
+    },
     "path": {
       "type": "array",
-      "description": "작업판 좌표(mm) 점 배열, 시작 → 끝",
+      "description": "면 좌표(mm) 점 배열, 시작 → 끝. surface가 있으면 그 면, 없으면 셀의 작업판",
       "minItems": 2,
       "items": {
         "type": "array",
-        "items": { "type": "number" },
+        "items": {
+          "type": "number"
+        },
         "minItems": 2,
         "maxItems": 2
       }
     },
-    "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
   }
 }

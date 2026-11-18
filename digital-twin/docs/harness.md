@@ -64,8 +64,18 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 | `stale` | `robot/state`가 3초간 끊겼다가 재개 | DY-09 |
 | `two-cells` | 셀 2개가 서로 다른 작업을 동시에 진행. 아직 없음: 지금은 `weld-basic`(셀 1 작업, 셀 2 대기)으로 DY-02를 본다 | DY-02 |
 | `factory-idle`, `factory-weld-basic` | 공장 사이트(셀 1개)의 `idle`, `weld-basic`. 생성기 함수에 사이트·셀을 넘겨 만든다(M4) | M4 |
+| `ship-block-idle` | 블록 내부: 스파이더 1은 바닥 외판, 스파이더 2는 측면 외판에 붙어 정지 | DY-10 |
+| `ship-block-weld` | 스파이더 1이 론지 사이를 걸어(트롯, 디딘 발은 강판에 고정) 작업 위치로 → 제안 → 실행(토치가 용접선을 따라감) → 완료. 스파이더 2는 수직 용접선 승인 대기 | DY-10, DY-11 |
+
+블록 픽스처는 로봇 형상을 대역 URDF에서, 면 위치를 site-config에서 읽어 만든다(걸음의 hip_yaw, 팔 역기구학). 로봇이나 블록을 바꾸면 `make_fixtures.py`를 다시 돌린다. `e2e/mobile.spec.ts`가 결과를 확인한다.
 
 위 표의 이름 없는 것은 조선소 픽스처다. 다른 사이트의 픽스처는 `{사이트}-` 접두어를 붙인다. 한 픽스처의 토픽은 한 사이트만 쓴다(`e2e/data.ts fixturesOfSite`가 이것으로 사이트별 픽스처를 찾는다).
+
+## 로봇 랩
+
+`/lab/robot?robot=spider-welder&mount=floor|wall&j=arm_2:30,fl_knee:-20&panel=0`. 사이트·픽스처 없이 로봇 하나를 바닥이나 강판 벽에 붙여 보고, 오른쪽 패널의 슬라이더로 관절을 움직인다.
+로봇은 0° 자세의 크기로 자동으로 놓인다(바닥: 최저점이 z=0, 벽: 발판이 벽 면 y=0). `window.__robotLab`(`frontend/src/lab/robot-lab-api.ts`)으로 링크 상자·좌표계를 조회하고, `e2e/robot.spec.ts`(L3)가 이것으로 단언한다.
+`shot.sh "robot?robot=spider-welder&mount=wall"`로 한 장 찍는다.
 
 ## 트윈 랩
 

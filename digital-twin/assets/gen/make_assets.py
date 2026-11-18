@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from pxr import Sdf, Usd, UsdGeom, Vt
+from pxr import Gf, Sdf, Usd, UsdGeom, Vt
 
 import meshkit as mk
 from meshkit import Model, cylinder, lathe, move, rot, rounded_box, tube
@@ -233,6 +233,78 @@ def crane_runway() -> Model:
     return m
 
 
+# ---------- 조선소 블록 내부(ADR 0003) ----------
+
+BLOCK_L, BLOCK_B = 9.6, 6.4  # 블록 길이(X), 폭(Y)
+SHELL_TOP_Z = 0.32  # 외판(바닥) 윗면 높이. 받침 위에 놓인다
+WEB_H = 1.5  # 늑판·거더 높이(외판 윗면부터)
+FLOOR_XS = (-4.8, -1.6, 1.6, 4.8)  # 늑판(횡방향) 위치
+LONGI_YS = (-2.4, -1.6, -0.8, 0.8, 1.6, 2.4)  # 론지(종방향 보강재) 위치. y=0은 중심 거더
+SIDE_Y = 3.2  # 측면 외판 위치. -Y 쪽은 열어 둔다(카메라가 들여다보는 쪽)
+WEB_T = 0.014
+
+
+def double_bottom_block() -> Model:
+    """이중저 블록(조립 중, 내저판 아직 없음). 원점: 블록 중심 바닥. 4족 이동 용접 로봇이 안에서 일한다(ADR 0003).
+    외판(바닥) 위에 론지, 늑판(맨홀), 중심 거더(맨홀), 측면 외판. 용접선이 놓이는 면을 surface 기준점으로 함께 쓴다."""
+    m = Model()
+    hl, hb = BLOCK_L / 2, BLOCK_B / 2
+    z0 = SHELL_TOP_Z
+    # 받침(스툴)
+    for x in (-4.2, -1.4, 1.4, 4.2):
+        for y in (-2.4, 0.0, 2.4):
+            m.add("painted_steel_dark", box((0.4, 0.4, z0 - 0.02), 0.01, (x, y, (z0 - 0.02) / 2)))
+    # 외판(바닥)
+    m.add("bare_steel", box((BLOCK_L, BLOCK_B, 0.02), 0.004, (0, 0, z0 - 0.01)))
+    # 론지: T형(웹 + 면재), 블록 길이 전체
+    for y in LONGI_YS:
+        m.add("primer_red", box((BLOCK_L - 0.02, 0.012, 0.2), 0.002, (0, y, z0 + 0.1)))
+        m.add("primer_red", box((BLOCK_L - 0.02, 0.09, 0.012), 0.002, (0, y, z0 + 0.206)))
+    # 늑판: 중심 거더 양쪽 패널. 안쪽 늑판은 맨홀
+    for x in FLOOR_XS:
+        for y0, y1 in ((-hb, 0.0), (0.0, hb)):
+            w, yc = y1 - y0 - WEB_T, (y0 + y1) / 2
+            if abs(x) < hl - 0.01:
+                panel = mk.plate_with_hole(w, WEB_H, WEB_T, (0.0, 0.78), (0.3, 0.42))
+                m.add("primer_red", move(rot(panel, "z", 90), (x, yc, z0)))
+            else:
+                m.add("primer_red", box((WEB_T, w, WEB_H), 0.002, (x, yc, z0 + WEB_H / 2)))
+    # 중심 거더: 늑판 사이 칸마다 맨홀
+    for x0, x1 in zip(FLOOR_XS[:-1], FLOOR_XS[1:]):
+        w, xc = x1 - x0 - WEB_T, (x0 + x1) / 2
+        m.add("primer_red", move(mk.plate_with_hole(w, WEB_H, WEB_T, (0.0, 0.78), (0.42, 0.3)), (xc, 0.0, z0)))
+    # 측면 외판(+Y)
+    m.add("bare_steel", box((BLOCK_L, WEB_T, WEB_H), 0.003, (0, SIDE_Y, z0 + WEB_H / 2)))
+    # 늑판 위 면재(보강 플랜지)
+    for x in FLOOR_XS:
+        m.add("primer_red", box((0.1, BLOCK_B - 0.02, 0.012), 0.002, (x, 0, z0 + WEB_H + 0.006)))
+    m.add("primer_red", box((BLOCK_L - 0.02, 0.1, 0.012), 0.002, (0, 0, z0 + WEB_H + 0.006)))
+    # 용접선이 놓이는 면(surfaces). 원점 = 면 모서리, +Z = 로봇이 붙는 쪽
+    m.anchors.append({"name": "BottomShell", "title": "외판(바닥) 윗면", "size_mm": (BLOCK_L * 1000, BLOCK_B * 1000), "translate": (-hl, -hb, z0), "rotate": (0, 0, 0)})
+    m.anchors.append({"name": "SideShell", "title": "측면 외판 안쪽 면", "size_mm": (BLOCK_L * 1000, WEB_H * 1000), "translate": (-hl, SIDE_Y - WEB_T / 2, z0), "rotate": (90, 0, 0)})
+    return m
+
+
+def block_yard_kit() -> Model:
+    """블록 밖 장비(사이트 전용, 원점 사이트 원점): 용접 전원·가스통(이동 로봇 송급용), 공구함, 접근 사다리."""
+    m = Model()
+    for i, y in enumerate((-1.6, 1.2)):
+        welder(m, -6.0, y)
+        gas_cylinder(m, -6.45, y + 0.05)
+        m.add("rubber_black", tube(mk.catmull_rom([[-5.8, y - 0.05, 0.8], [-5.55, y - 0.15, 0.4], [-5.2, y * 0.6, 0.015], [-4.9, y * 0.3, 0.015]], 10), 0.014, 12))
+    m.add("primer_red", box((0.6, 0.45, 0.9), 0.02, (-6.1, -3.6, 0.45)))
+    m.add("painted_steel_dark", box((0.62, 0.47, 0.03), 0.005, (-6.1, -3.6, 0.915)))
+    # 접근 사다리(-Y 열린 쪽, 블록 위로)
+    lx, ly = -3.0, -3.75
+    for dx in (-0.22, 0.22):
+        m.add("safety_yellow", tube([[lx + dx, ly - 0.45, 0.0], [lx + dx, ly + 0.25, 1.85]], 0.018, 10))
+    for k in range(1, 7):
+        z = k * 0.27
+        y = ly - 0.45 + 0.7 * z / 1.85
+        m.add("galvanized_steel", tube([[lx - 0.22, y, z], [lx + 0.22, y, z]], 0.012, 8))
+    return m
+
+
 # ---------- 공장 배경 ----------
 
 def h_column(m: Model, x: float, y: float, h: float = 7.5, along_x: bool = True) -> None:
@@ -335,6 +407,8 @@ ASSETS = {
     "crane_runway": (crane_runway, "CraneRunway"),
     "weld_booth_kit": (weld_booth_kit, "WeldBoothKit"),
     "factory_hall": (factory_hall, "FactoryHall"),
+    "double_bottom_block": (double_bottom_block, "DoubleBottomBlock"),
+    "block_yard_kit": (block_yard_kit, "BlockYardKit"),
 }
 
 
@@ -356,6 +430,17 @@ def to_usda(model: Model, prim: str, doc: str) -> str:
         mesh.CreateSubdivisionSchemeAttr(UsdGeom.Tokens.none)
         mesh.CreateExtentAttr(Vt.Vec3fArray.FromNumpy(np.stack([pts.min(axis=0), pts.max(axis=0)])))
         mesh.GetPrim().CreateAttribute("innoworks:material", Sdf.ValueTypeNames.Token).Set(mat)
+    if model.anchors:
+        UsdGeom.Xform.Define(stage, f"/{prim}/Surfaces")
+    for a in model.anchors:
+        x = UsdGeom.Xform.Define(stage, f"/{prim}/Surfaces/{a['name']}")
+        x.AddTranslateOp().Set(Gf.Vec3d(*a["translate"]))
+        if any(a["rotate"]):
+            x.AddRotateXYZOp().Set(Gf.Vec3f(*a["rotate"]))
+        p = x.GetPrim()
+        p.SetCustomData({"innoworks:role": "surface"})  # SetCustomDataByKey는 ":"를 중첩 경로로 쓴다
+        p.CreateAttribute("innoworks:name", Sdf.ValueTypeNames.String).Set(a["title"])
+        p.CreateAttribute("innoworks:sizeMm", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(*a["size_mm"]))
     return stage.GetRootLayer().ExportToString()
 
 

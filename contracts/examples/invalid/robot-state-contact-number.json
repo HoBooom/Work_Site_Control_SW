@@ -1,0 +1,14 @@
+{
+  "schema": "robot-state",
+  "why": "발 접촉은 true/false",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "joints": {
+      "a": 0
+    },
+    "contacts": {
+      "fl_foot": 1
+    }
+  }
+}

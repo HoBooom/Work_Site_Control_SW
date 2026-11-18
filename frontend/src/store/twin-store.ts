@@ -3,6 +3,8 @@ import { parseCellTopic } from '../bus/topics';
 import type {
   Alarm,
   CellTopicPayloads,
+  FootContacts,
+  RobotBase,
   TaskProgress,
   TaskProposal,
   TaskSnap,
@@ -20,6 +22,10 @@ export interface CellState {
   jointsTs: number | null;
   /** 최근 robot/state 샘플(오래된 것부터). 씬이 보간에 쓴다(DY-01). at = 수신 시각 */
   jointSamples: JointSample[];
+  /** 이동 로봇의 마지막 몸통 자세(ADR 0003). 고정 로봇은 null. 보간은 jointSamples[].base로 한다 */
+  base: RobotBase | null;
+  /** 마지막 발 접촉(발 링크 이름 → 붙음). 고정 로봇은 null */
+  contacts: FootContacts | null;
   task: TaskState | null;
   proposal: TaskProposal | null;
   snap: TaskSnap | null;
@@ -33,6 +39,9 @@ export interface JointSample {
   at: number;
   ts: number;
   joints: Record<string, number>;
+  /** 이동 로봇만 */
+  base?: RobotBase;
+  contacts?: FootContacts;
 }
 
 /** 보간에 쓰는 샘플 수. 20Hz에서 400ms 분량 */
@@ -48,6 +57,8 @@ function emptyCell(site: string, cell: string): CellState {
     joints: null,
     jointsTs: null,
     jointSamples: [],
+    base: null,
+    contacts: null,
     task: null,
     proposal: null,
     snap: null,
@@ -66,11 +77,15 @@ export function reduceCell<S extends keyof CellTopicPayloads>(
   switch (suffix) {
     case 'robot/state': {
       const p = payload as CellTopicPayloads['robot/state'];
-      const sample = { at, ts: p.ts, joints: p.joints };
+      const sample: JointSample = { at, ts: p.ts, joints: p.joints };
+      if (p.base) sample.base = p.base;
+      if (p.contacts) sample.contacts = p.contacts;
       return {
         ...prev,
         joints: p.joints,
         jointsTs: p.ts,
+        base: p.base ?? null,
+        contacts: p.contacts ?? null,
         jointSamples: [...prev.jointSamples, sample].slice(-JOINT_SAMPLES_KEPT),
       };
     }

@@ -1,0 +1,72 @@
+{
+  "schema": "site-config",
+  "why": "면에는 크기가 있어야 한다",
+  "payload": {
+    "v": 1,
+    "site": "b",
+    "name": "b",
+    "background": {
+      "glb": null
+    },
+    "surfaces": [
+      {
+        "id": "s",
+        "name": "s",
+        "pose": {
+          "position_m": [
+            0,
+            0,
+            0
+          ],
+          "orientation_xyzw": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      }
+    ],
+    "cells": [
+      {
+        "id": "c",
+        "name": "c",
+        "pose": {
+          "position_m": [
+            0,
+            0,
+            0
+          ],
+          "yaw_deg": 0
+        },
+        "robot": {
+          "urdf": null,
+          "pose": {
+            "position_m": [
+              0,
+              0,
+              0
+            ],
+            "yaw_deg": 0
+          }
+        }
+      }
+    ],
+    "presets": [
+      {
+        "id": "o",
+        "name": "o",
+        "eye_m": [
+          1,
+          1,
+          1
+        ],
+        "target_m": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  }
+}

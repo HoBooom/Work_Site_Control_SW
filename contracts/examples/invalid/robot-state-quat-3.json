@@ -1,0 +1,24 @@
+{
+  "schema": "robot-state",
+  "why": "자세는 쿼터니언 4개 값",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "joints": {
+      "a": 0
+    },
+    "base": {
+      "position_m": [
+        0,
+        0,
+        0
+      ],
+      "orientation_xyzw": [
+        0,
+        0,
+        1
+      ],
+      "surface": null
+    }
+  }
+}

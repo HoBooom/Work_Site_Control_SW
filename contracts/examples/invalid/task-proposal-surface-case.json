@@ -1,0 +1,20 @@
+{
+  "schema": "task-proposal",
+  "why": "surface id는 kebab-case",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "task_id": "t",
+    "surface": "SideShell",
+    "path": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  }
+}

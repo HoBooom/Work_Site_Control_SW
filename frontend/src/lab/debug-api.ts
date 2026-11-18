@@ -42,6 +42,8 @@ export interface TwinDebugApi {
   setQuality(tier: QualityTier): Promise<void>;
   /** 씬의 로봇 관절각(deg). 로봇이 없으면 null */
   joints(site: string, cell: string): Record<string, number> | null;
+  /** 로봇 링크 하나(자식 링크 제외)의 월드 AABB. 링크가 없으면 null */
+  link(site: string, cell: string, link: string): { min: V3; max: V3 } | null;
   camera(): CameraInfo;
   /** 렌더 설정(RD-02~05): 품질 등급, 환경광, 키 라이트 그림자, 켜진 후처리 */
   render(): RenderInfo;
@@ -83,6 +85,10 @@ export interface CellViewInfo {
   robotGray: boolean;
   /** "멈춤" 표시가 보이는가(DY-09) */
   stale: boolean;
+  /** DY-12 발 접촉 표시: 발 링크 → 표시된 상태(true = 자석 붙음). 표시가 없으면 빈 객체 */
+  contacts: Record<string, boolean>;
+  /** 발 접촉 표시의 중심(사이트 좌표) */
+  contactRings: Record<string, V3>;
 }
 
 export interface RenderInfo {
@@ -102,6 +108,8 @@ export interface CameraInfo {
   position: V3;
   target: V3;
   distance: number;
+  /** IX-07 카메라가 따라가는 로봇. 없으면 null */
+  follow: { site: string; cell: string } | null;
 }
 
 interface Bound {
@@ -278,11 +286,22 @@ export function installDebugApi() {
       alarms.sort((a, b) => a.z - b.z);
       let robotGray = true;
       let robotMeshes = 0;
+      const contacts: Record<string, boolean> = {};
+      const contactRings: Record<string, V3> = {};
       find(site, cell, 'robot')?.traverse((o) => {
         if (!(o instanceof Mesh)) return;
+        if (o.userData.contact) {
+          if (isVisible(o)) {
+            contacts[o.userData.contact] = o.userData.on;
+            contactRings[o.userData.contact] = sceneToSite(o.getWorldPosition(new Vector3()));
+          }
+          return; // 표시물은 로봇 색 판정에서 뺀다
+        }
         robotMeshes++;
-        const c = ((Array.isArray(o.material) ? o.material[0] : o.material) as Material & { color?: Color }).color;
-        if (c && Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) > 0.12) robotGray = false;
+        const m = (Array.isArray(o.material) ? o.material[0] : o.material) as Material & { color?: Color };
+        // 로봇은 팔레트 텍스처로 색을 낸다(Robot.tsx). 지금 팔레트의 색을 모두 본다
+        const colors = (m.userData.palette as Color[] | undefined) ?? (m.color ? [m.color] : []);
+        if (colors.some((c) => Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) > 0.12)) robotGray = false;
       });
       return {
         lamp: lamp ? { state: lamp.userData.state, color: colorHex(lamp.material) } : null,
@@ -290,6 +309,8 @@ export function installDebugApi() {
         alarms: alarms.map(({ id, severity, color }) => ({ id, severity, color })),
         robotGray: robotMeshes > 0 && robotGray,
         stale: !!document.querySelector(`[data-testid="${staleTestId(site, cell)}"]`),
+        contacts,
+        contactRings,
       };
     },
     screen: (site, cell, part) => {
@@ -326,6 +347,21 @@ export function installDebugApi() {
       const next = lastMount + 1;
       needControls().setQuality(tier);
       await waitMount(next);
+    },
+    link: (site, cell, name) => {
+      const robot = urdfOf(find(site, cell, 'robot'));
+      const l = robot?.links[name];
+      if (!l) return null;
+      l.updateWorldMatrix(true, true);
+      const b = new Box3();
+      for (const c of l.children) if ((c as { isURDFVisual?: boolean }).isURDFVisual) b.expandByObject(c);
+      if (b.isEmpty()) return null;
+      const a = sceneToSite(b.min);
+      const z = sceneToSite(b.max);
+      return {
+        min: [Math.min(a[0], z[0]), Math.min(a[1], z[1]), Math.min(a[2], z[2])],
+        max: [Math.max(a[0], z[0]), Math.max(a[1], z[1]), Math.max(a[2], z[2])],
+      };
     },
     joints: (site, cell) => {
       const robot = urdfOf(find(site, cell, 'robot'));
@@ -390,6 +426,7 @@ export function installDebugApi() {
         position: sceneToSite(camera.position),
         target: sceneToSite(target),
         distance: camera.position.distanceTo(target),
+        follow: (three().scene.userData.follow as { site: string; cell: string } | undefined) ?? null,
       };
     },
   };

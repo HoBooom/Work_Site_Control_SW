@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "site-config",
   "title": "SiteConfig",
-  "description": "digital-twin/site-config/{site}.json. 웹이 읽는 사이트 설정. 좌표는 사이트 좌표계(USD와 같음: Z-up, m, 회전 deg). 셀의 위치·회전은 USD에서 생성한다.",
+  "description": "digital-twin/site-config/{site}.json. 웹이 읽는 사이트 설정. 좌표는 사이트 좌표계(USD와 같음: Z-up, m, 회전 deg). 셀의 위치·회전과 surfaces는 USD에서 생성한다.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -46,6 +46,34 @@
       },
       "title": "Pose",
       "description": "부모 좌표계 기준 자세. 셀은 사이트 기준, 작업판(원점 모서리, 윗면 높이)과 로봇 베이스는 셀 기준"
+    },
+    "quat": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 4,
+      "maxItems": 4,
+      "title": "QuatXyzw",
+      "description": "단위 쿼터니언 [x, y, z, w]"
+    },
+    "surfacePose": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "position_m",
+        "orientation_xyzw"
+      ],
+      "title": "SurfacePose",
+      "description": "면 좌표계의 사이트 기준 자세. 원점 = 면의 한 모서리, 면 위가 XY, +Z = 로봇이 붙는 쪽(용접하는 쪽) 법선",
+      "properties": {
+        "position_m": {
+          "$ref": "#/definitions/vec3"
+        },
+        "orientation_xyzw": {
+          "$ref": "#/definitions/quat"
+        }
+      }
     }
   },
   "properties": {
@@ -90,6 +118,42 @@
         }
       }
     },
+    "surfaces": {
+      "type": "array",
+      "description": "용접선이 놓이는 강판 면(내저판, 격벽, 외판 등). task/proposal의 surface가 가리킨다. USD에서 생성한다",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "size_mm",
+          "pose"
+        ],
+        "title": "Surface",
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/kebab"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size_mm": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[면 X, 면 Y]"
+          },
+          "pose": {
+            "$ref": "#/definitions/surfacePose"
+          }
+        }
+      }
+    },
     "cells": {
       "type": "array",
       "minItems": 1,
@@ -100,7 +164,6 @@
           "id",
           "name",
           "pose",
-          "plate",
           "robot"
         ],
         "properties": {
@@ -134,7 +197,8 @@
               "pose": {
                 "$ref": "#/definitions/pose"
               }
-            }
+            },
+            "description": "고정 로봇의 작업판. 이동 로봇은 없다"
           },
           "robot": {
             "type": "object",
@@ -171,7 +235,7 @@
           }
         }
       },
-      "description": "셀 id는 토픽의 {cell}, site는 토픽의 {site}와 같다"
+      "description": "작업 단위 = 로봇 1대(ADR 0003). 셀 id는 토픽의 {cell}, site는 토픽의 {site}와 같다. 고정 로봇은 작업판(plate)을 갖고, 이동 로봇은 작업판 없이 surfaces 위에서 일한다(pose는 대기 위치)"
     },
     "presets": {
       "type": "array",

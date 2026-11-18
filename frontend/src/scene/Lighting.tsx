@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { PMREMGenerator, type DirectionalLight } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { SiteConfig } from '../contracts/messages.gen';
-import { siteBounds } from './bounds';
+import { siteBounds, type SiteBounds } from './bounds';
 import { siteToScene } from './frame';
 import type { QualitySettings } from './quality';
 
@@ -28,10 +28,15 @@ interface Props {
  * 키 라이트 그림자 범위는 사이트 영역에 맞춘다.
  */
 export function Lighting({ config, quality }: Props) {
+  const bounds = useMemo(() => siteBounds(config, SHADOW_MARGIN_M), [config]);
+  return <LightRig bounds={bounds} quality={quality} />;
+}
+
+/** 조명 본체. 그림자 범위를 사이트 좌표 영역으로 받는다(로봇 랩은 로봇 주변만 넘긴다) */
+export function LightRig({ bounds, quality }: { bounds: SiteBounds; quality: QualitySettings }) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const light = useRef<DirectionalLight>(null);
-  const bounds = useMemo(() => siteBounds(config, SHADOW_MARGIN_M), [config]);
 
   useEffect(() => {
     const pmrem = new PMREMGenerator(gl);

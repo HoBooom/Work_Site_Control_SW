@@ -1,0 +1,21 @@
+{
+  "schema": "task-snap",
+  "why": "수렴 결과도 같은 면 좌표",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "task_id": "t-1",
+    "surface": "side-shell",
+    "ok": true,
+    "path": [
+      [
+        100,
+        200
+      ],
+      [
+        900,
+        220
+      ]
+    ]
+  }
+}

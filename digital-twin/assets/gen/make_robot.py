@@ -1,9 +1,11 @@
-"""대역 6축 용접 로봇(AS-02) 생성기: 링크별 STL 메시 + URDF. 손으로 고치지 말고 이 파일을 고친다.
+"""로봇 생성기: 링크별 STL 메시 + URDF. 손으로 고치지 말고 이 파일을 고친다.
 
     uv run --project digital-twin/pipeline python digital-twin/assets/gen/make_robot.py [--check]
 
-관절 이름·원점·축은 바꾸지 않는다(robot/state, 픽스처, 테스트가 의존한다). 메시는 각 링크 좌표계로 만든다.
-실제 기종이 정해지면 제조사 메시로 바꾸되 관절 이름(joint_1~joint_6)을 맞춘다.
+로봇
+- standin-6axis: 고정형 대역 6축 용접 로봇(AS-02, M1~M4). 관절 이름·원점·축은 바꾸지 않는다(픽스처, 테스트가 의존한다).
+- spider-welder: 4족 자석발 이동 용접 로봇 대역(ADR 0003). spider.py.
+메시는 각 링크 좌표계로 만든다. 실제 기종이 정해지면 제조사 메시로 바꾸되 관절 이름을 맞춘다.
 """
 from __future__ import annotations
 
@@ -16,7 +18,7 @@ import numpy as np
 import meshkit as mk
 from meshkit import Model, cylinder, lathe, move, rot, rounded_box, tube
 
-OUT = Path(__file__).resolve().parent.parent / "robot" / "standin-6axis"
+ROBOT_DIR = Path(__file__).resolve().parent.parent / "robot"
 
 COLORS = {
     "body": "0.95 0.48 0.08 1",
@@ -105,57 +107,79 @@ JOINTS = """
 """
 
 
-def stl(V: np.ndarray, F: np.ndarray) -> bytes:
+def stl(V: np.ndarray, F: np.ndarray, name: str = "standin-6axis") -> bytes:
     tris = V[F].astype(np.float32)
     n = np.cross(tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0])
     n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
     rec = np.zeros(len(F), dtype=[("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")])
     rec["n"], rec["v"] = n, tris
-    return b"standin-6axis twin-pipeline".ljust(80, b"\0") + struct.pack("<I", len(F)) + rec.tobytes()
+    return f"{name} twin-pipeline".encode().ljust(80, b"\0") + struct.pack("<I", len(F)) + rec.tobytes()
 
 
-def build() -> dict[Path, bytes]:
+def write_robot(name: str, links_: dict[str, Model], colors: dict[str, str], joints_xml: str, comment: str) -> dict[Path, bytes]:
+    out_dir = ROBOT_DIR / name
     files: dict[Path, bytes] = {}
     link_xml = []
-    for name, model in links().items():
+    for lname, model in links_.items():
         visuals = []
         for mat, (V, F) in model.merged().items():
-            fname = f"meshes/{name}_{mat}.stl"
-            files[OUT / fname] = stl(V, F)
+            fname = f"meshes/{lname}_{mat}.stl"
+            files[out_dir / fname] = stl(V, F, name)
             visuals.append(
                 f'    <visual>\n      <geometry><mesh filename="{fname}"/></geometry>\n      <material name="{mat}"/>\n    </visual>'
             )
-        link_xml.append(f'  <link name="{name}">\n' + "\n".join(visuals) + "\n  </link>")
-    mats = "\n".join(f'  <material name="{k}"><color rgba="{v}"/></material>' for k, v in COLORS.items())
+        link_xml.append(f'  <link name="{lname}">\n' + "\n".join(visuals) + "\n  </link>" if visuals else f'  <link name="{lname}"/>')
+    mats = "\n".join(f'  <material name="{k}"><color rgba="{v}"/></material>' for k, v in colors.items())
     urdf = (
         '<?xml version="1.0"?>\n'
         "<!--\n  생성 파일(digital-twin/assets/gen/make_robot.py). 직접 고치지 않는다.\n"
-        "  대역 6축 용접 로봇(spec 7절). 실제 기종이 정해지면 같은 관절 이름(joint_1~joint_6)으로 교체한다.\n"
-        "  좌표: Z-up, m. 관절 0°: 상완 수직, 전완 +X 수평.\n-->\n"
-        '<robot name="standin-6axis">\n' + mats + "\n\n" + "\n\n".join(link_xml) + "\n" + JOINTS + "</robot>\n"
+        + comment
+        + "\n-->\n"
+        f'<robot name="{name}">\n' + mats + "\n\n" + "\n\n".join(link_xml) + "\n" + joints_xml + "</robot>\n"
     )
-    files[OUT / "robot.urdf"] = urdf.encode("utf-8")
+    files[out_dir / "robot.urdf"] = urdf.encode("utf-8")
+    return files
+
+
+def standin() -> dict[Path, bytes]:
+    return write_robot(
+        "standin-6axis",
+        links(),
+        COLORS,
+        JOINTS,
+        "  대역 6축 용접 로봇(spec 7절). 실제 기종이 정해지면 같은 관절 이름(joint_1~joint_6)으로 교체한다.\n"
+        "  좌표: Z-up, m. 관절 0°: 상완 수직, 전완 +X 수평.",
+    )
+
+
+def build() -> dict[Path, bytes]:
+    import spider
+
+    files = standin()
+    files.update(write_robot(spider.NAME, spider.links(), spider.COLORS, spider.joints_xml(), spider.COMMENT))
     return files
 
 
 def main() -> int:
     files = build()
+    dirs = sorted({p.parent.parent if p.parent.name == "meshes" else p.parent for p in files})
+    existing = {p for d in dirs if (d / "meshes").exists() for p in (d / "meshes").glob("*.stl")}
+    extra = sorted(existing - set(files))
     if "--check" in sys.argv:
-        stale = [p.name for p, b in files.items() if not p.exists() or p.read_bytes() != b]
-        extra = [p.name for p in (OUT / "meshes").glob("*.stl") if p not in files] if (OUT / "meshes").exists() else []
+        stale = [str(p.relative_to(ROBOT_DIR)) for p, b in files.items() if not p.exists() or p.read_bytes() != b]
         if stale or extra:
-            print("생성기와 다른 로봇 파일: " + ", ".join(stale + extra) + ". make_robot.py를 실행한다.", file=sys.stderr)
+            print("생성기와 다른 로봇 파일: " + ", ".join(stale + [str(p.relative_to(ROBOT_DIR)) for p in extra]) + ". make_robot.py를 실행한다.", file=sys.stderr)
             return 1
-        print(f"로봇 파일 {len(files)}개 최신")
+        print(f"로봇 {len(dirs)}대, 파일 {len(files)}개 최신")
         return 0
-    (OUT / "meshes").mkdir(parents=True, exist_ok=True)
-    for old in (OUT / "meshes").glob("*.stl"):
-        if old not in files:
-            old.unlink()
+    for old in extra:
+        old.unlink()
     for p, b in files.items():
+        p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(b)
-    tris = sum((len(b) - 84) // 50 for p, b in files.items() if p.suffix == ".stl")
-    print(f"로봇 파일 {len(files)}개, 삼각형 {tris}")
+    for d in dirs:
+        tris = sum((len(b) - 84) // 50 for p, b in files.items() if p.suffix == ".stl" and d in p.parents)
+        print(f"{d.name}: 파일 {sum(1 for p in files if d in p.parents)}개, 삼각형 {tris}")
     return 0
 
 

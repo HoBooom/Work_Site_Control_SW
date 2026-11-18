@@ -1,0 +1,100 @@
+#usda 1.0
+(
+    defaultPrim = "ShipBlock"
+    metersPerUnit = 1
+    upAxis = "Z"
+    doc = """조선소 이중저 블록 내부(ADR 0003). 4족 자석발 이동 용접 로봇 2대가 블록 안을 걷고 벽에 붙어 용접한다.
+규칙: prim 경로 = 토픽 = 설정 키. /ShipBlock/Spider1 = ship-block/spider-1(작업 단위 = 로봇 1대).
+이동 로봇 셀은 Plate가 없다. 셀 자세는 대기 위치이고, 움직이는 동안의 자세는 robot/state.base가 준다.
+용접선이 놓이는 면(surfaces)은 블록 에셋 안의 기준점에서 site-config로 생성된다."""
+)
+
+def Xform "ShipBlock" (
+    kind = "assembly"
+    customData = {
+        string "innoworks:role" = "site"
+    }
+)
+{
+    string innoworks:name = "조선소 이중저 블록 내부"
+
+    def Xform "Env"
+    {
+        def Cube "Floor"
+        {
+            double size = 1
+            token innoworks:material = "concrete_floor"
+            double3 xformOp:translate = (0, 0, -0.05)
+            float3 xformOp:scale = (80, 80, 0.1)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def "Block" (
+            references = @../assets/props/double_bottom_block.usda@
+        )
+        {
+        }
+
+        def "Yard" (
+            references = @../assets/props/block_yard_kit.usda@
+        )
+        {
+        }
+
+        def "Crane" (
+            references = @../assets/props/crane_runway.usda@
+        )
+        {
+            double3 xformOp:translate = (-6, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "Spider1" (
+        customData = {
+            string "innoworks:role" = "cell"
+        }
+    )
+    {
+        string innoworks:name = "스파이더 1"
+        double3 xformOp:translate = (-0.9, 1.2, 0.32)
+        float xformOp:rotateZ = 0
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+
+        def Xform "Robot" (
+            customData = {
+                string "innoworks:role" = "robot"
+            }
+        )
+        {
+            string innoworks:urdf = "/robots/spider-welder/robot.urdf"
+            double3 xformOp:translate = (0, 0, 0.14)
+            float xformOp:rotateZ = 0
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+        }
+    }
+
+    def Xform "Spider2" (
+        customData = {
+            string "innoworks:role" = "cell"
+        }
+    )
+    {
+        string innoworks:name = "스파이더 2"
+        double3 xformOp:translate = (3.2, 1.2, 0.32)
+        float xformOp:rotateZ = 0
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+
+        def Xform "Robot" (
+            customData = {
+                string "innoworks:role" = "robot"
+            }
+        )
+        {
+            string innoworks:urdf = "/robots/spider-welder/robot.urdf"
+            double3 xformOp:translate = (0, 0, 0.14)
+            float xformOp:rotateZ = 0
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+        }
+    }
+}

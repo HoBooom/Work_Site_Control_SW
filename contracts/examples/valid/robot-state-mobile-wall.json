@@ -1,0 +1,32 @@
+{
+  "schema": "robot-state",
+  "why": "이동 로봇이 수직벽(외판 면)에 붙어 있다: 몸통 자세, 붙은 면, 발 자석",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "joints": {
+      "fl_knee": 5,
+      "arm_2": 30
+    },
+    "base": {
+      "position_m": [
+        3.2,
+        1.1,
+        1.4
+      ],
+      "orientation_xyzw": [
+        0.7071068,
+        0,
+        0,
+        0.7071068
+      ],
+      "surface": "side-shell"
+    },
+    "contacts": {
+      "fl_foot": true,
+      "fr_foot": true,
+      "rl_foot": false,
+      "rr_foot": true
+    }
+  }
+}

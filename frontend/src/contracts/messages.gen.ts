@@ -18,7 +18,7 @@ export interface Alarm {
 }
 
 /**
- * innoworks/{site}/{cell}/robot/state. 서버→웹, 10~20Hz, QoS 0. 관절 이름은 로봇 URDF의 joint 이름과 같다.
+ * innoworks/{site}/{cell}/robot/state. 서버→웹, 10~20Hz, QoS 0. {cell}은 작업 단위 = 로봇 id(ADR 0003). 관절 이름은 로봇 URDF의 joint 이름과 같다. 이동 로봇은 base·contacts를 함께 보낸다. 고정 로봇은 보내지 않는다.
  */
 export interface RobotState {
   /**
@@ -35,6 +35,37 @@ export interface RobotState {
   joints: {
     [k: string]: number;
   };
+  base?: RobotBase;
+  contacts?: FootContacts;
+}
+/**
+ * 이동 로봇의 몸통 자세(URDF base_link). 사이트 좌표계(Z-up, m). 있으면 site-config의 셀·로봇 자세 대신 이것으로 놓는다
+ */
+export interface RobotBase {
+  /**
+   * 위치(m)
+   *
+   * @minItems 3
+   * @maxItems 3
+   */
+  position_m: [number, number, number];
+  /**
+   * 단위 쿼터니언 [x, y, z, w]
+   *
+   * @minItems 4
+   * @maxItems 4
+   */
+  orientation_xyzw: [number, number, number, number];
+  /**
+   * 발이 붙어 있는 site-config surfaces의 id. 바닥을 걷거나 면에 붙지 않았으면 null
+   */
+  surface: string | null;
+}
+/**
+ * 발(URDF 링크 이름) → 자석이 켜져 면에 붙어 있으면 true
+ */
+export interface FootContacts {
+  [k: string]: boolean;
 }
 
 export type KebabId = string;
@@ -43,9 +74,16 @@ export type KebabId = string;
  * @maxItems 3
  */
 export type Vec3 = [number, number, number];
+/**
+ * 단위 쿼터니언 [x, y, z, w]
+ *
+ * @minItems 4
+ * @maxItems 4
+ */
+export type QuatXyzw = [number, number, number, number];
 
 /**
- * digital-twin/site-config/{site}.json. 웹이 읽는 사이트 설정. 좌표는 사이트 좌표계(USD와 같음: Z-up, m, 회전 deg). 셀의 위치·회전은 USD에서 생성한다.
+ * digital-twin/site-config/{site}.json. 웹이 읽는 사이트 설정. 좌표는 사이트 좌표계(USD와 같음: Z-up, m, 회전 deg). 셀의 위치·회전과 surfaces는 USD에서 생성한다.
  */
 export interface SiteConfig {
   v: 1;
@@ -62,7 +100,11 @@ export interface SiteConfig {
     exposure?: number;
   };
   /**
-   * 셀 id는 토픽의 {cell}, site는 토픽의 {site}와 같다
+   * 용접선이 놓이는 강판 면(내저판, 격벽, 외판 등). task/proposal의 surface가 가리킨다. USD에서 생성한다
+   */
+  surfaces?: Surface[];
+  /**
+   * 작업 단위 = 로봇 1대(ADR 0003). 셀 id는 토픽의 {cell}, site는 토픽의 {site}와 같다. 고정 로봇은 작업판(plate)을 갖고, 이동 로봇은 작업판 없이 surfaces 위에서 일한다(pose는 대기 위치)
    *
    * @minItems 1
    */
@@ -71,7 +113,10 @@ export interface SiteConfig {
       id: KebabId;
       name: string;
       pose: Pose;
-      plate: {
+      /**
+       * 고정 로봇의 작업판. 이동 로봇은 없다
+       */
+      plate?: {
         /**
          * [가로 X, 세로 Y]
          *
@@ -99,7 +144,10 @@ export interface SiteConfig {
       id: KebabId;
       name: string;
       pose: Pose;
-      plate: {
+      /**
+       * 고정 로봇의 작업판. 이동 로봇은 없다
+       */
+      plate?: {
         /**
          * [가로 X, 세로 Y]
          *
@@ -142,6 +190,25 @@ export interface SiteConfig {
     }[]
   ];
 }
+export interface Surface {
+  id: KebabId;
+  name: string;
+  /**
+   * [면 X, 면 Y]
+   *
+   * @minItems 2
+   * @maxItems 2
+   */
+  size_mm: [number, number];
+  pose: SurfacePose;
+}
+/**
+ * 면 좌표계의 사이트 기준 자세. 원점 = 면의 한 모서리, 면 위가 XY, +Z = 로봇이 붙는 쪽(용접하는 쪽) 법선
+ */
+export interface SurfacePose {
+  position_m: Vec3;
+  orientation_xyzw: QuatXyzw;
+}
 /**
  * 부모 좌표계 기준 자세. 셀은 사이트 기준, 작업판(원점 모서리, 윗면 높이)과 로봇 베이스는 셀 기준
  */
@@ -183,7 +250,11 @@ export interface TaskProposal {
   ts: number;
   task_id: string;
   /**
-   * 작업판 좌표(mm) 점 배열, 시작 → 끝
+   * 경로가 놓인 site-config surfaces의 id. 이동 로봇은 꼭 적는다. 없으면 셀의 작업판(고정 로봇)
+   */
+  surface?: string;
+  /**
+   * 면 좌표(mm) 점 배열, 시작 → 끝. surface가 있으면 그 면, 없으면 셀의 작업판
    *
    * @minItems 2
    */
@@ -203,7 +274,11 @@ export interface TaskSnap {
    */
   ok: boolean;
   /**
-   * 작업판 좌표(mm) 점 배열, 시작 → 끝
+   * 경로가 놓인 site-config surfaces의 id. 이동 로봇은 꼭 적는다. 없으면 셀의 작업판(고정 로봇)
+   */
+  surface?: string;
+  /**
+   * 면 좌표(mm) 점 배열, 시작 → 끝. surface가 있으면 그 면, 없으면 셀의 작업판
    *
    * @minItems 2
    */

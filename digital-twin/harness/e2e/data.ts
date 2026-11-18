@@ -43,6 +43,12 @@ export function fixture(name: string): Line[] {
     .map((l) => JSON.parse(l));
 }
 
+/** 고정 로봇 셀의 작업판. 없으면(이동 로봇) 테스트를 실패시킨다 */
+export function plateOf(cell: SiteConfig['cells'][number]) {
+  if (!cell.plate) throw new Error(`${cell.id}에 작업판이 없다`);
+  return cell.plate;
+}
+
 const T0 = 1_767_225_600_000;
 export const tsAt = (t: number) => T0 + t;
 

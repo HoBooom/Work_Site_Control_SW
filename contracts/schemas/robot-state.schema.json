@@ -2,18 +2,78 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "robot-state",
   "title": "RobotState",
-  "description": "innoworks/{site}/{cell}/robot/state. 서버→웹, 10~20Hz, QoS 0. 관절 이름은 로봇 URDF의 joint 이름과 같다.",
+  "description": "innoworks/{site}/{cell}/robot/state. 서버→웹, 10~20Hz, QoS 0. {cell}은 작업 단위 = 로봇 id(ADR 0003). 관절 이름은 로봇 URDF의 joint 이름과 같다. 이동 로봇은 base·contacts를 함께 보낸다. 고정 로봇은 보내지 않는다.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["v", "ts", "joints"],
+  "required": [
+    "v",
+    "ts",
+    "joints"
+  ],
   "properties": {
-    "v": { "const": 1, "description": "스키마 버전" },
-    "ts": { "type": "integer", "minimum": 0, "description": "epoch ms" },
+    "v": {
+      "const": 1,
+      "description": "스키마 버전"
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "epoch ms"
+    },
     "joints": {
       "type": "object",
       "description": "관절 이름 → 각도(deg)",
       "minProperties": 1,
-      "additionalProperties": { "type": "number" }
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "position_m",
+        "orientation_xyzw",
+        "surface"
+      ],
+      "title": "RobotBase",
+      "description": "이동 로봇의 몸통 자세(URDF base_link). 사이트 좌표계(Z-up, m). 있으면 site-config의 셀·로봇 자세 대신 이것으로 놓는다",
+      "properties": {
+        "position_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "위치(m)"
+        },
+        "orientation_xyzw": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "단위 쿼터니언 [x, y, z, w]"
+        },
+        "surface": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "발이 붙어 있는 site-config surfaces의 id. 바닥을 걷거나 면에 붙지 않았으면 null"
+        }
+      }
+    },
+    "contacts": {
+      "type": "object",
+      "title": "FootContacts",
+      "description": "발(URDF 링크 이름) → 자석이 켜져 면에 붙어 있으면 true",
+      "additionalProperties": {
+        "type": "boolean"
+      }
     }
   }
 }

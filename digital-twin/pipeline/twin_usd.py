@@ -77,6 +77,36 @@ def local_pose(prim: Usd.Prim) -> tuple[Pose | None, str | None]:
     return Pose((t[0], t[1], t[2]), yaw), None
 
 
+@dataclass
+class SurfacePose:
+    position_m: tuple[float, float, float]
+    orientation_xyzw: tuple[float, float, float, float]
+
+    def to_json(self) -> dict:
+        return {"position_m": [_num(v) for v in self.position_m], "orientation_xyzw": [_num(v) for v in self.orientation_xyzw]}
+
+
+def site_pose(prim: Usd.Prim) -> tuple[SurfacePose | None, str | None]:
+    """사이트 루트(변환 없음) 기준 자세: 위치 + 쿼터니언(xyzw, w ≥ 0). 스케일이 있으면 (None, 이유)."""
+    m: Gf.Matrix4d = UsdGeom.XformCache(Usd.TimeCode.Default()).GetLocalToWorldTransform(prim)
+    rows = [m.GetRow3(i) for i in range(3)]
+    if any(abs(r.GetLength() - 1) > EPS for r in rows):
+        return None, "스케일이 있다"
+    q = m.ExtractRotationQuat()
+    x, y, z = q.GetImaginary()
+    w = q.GetReal()
+    if w < 0 or (abs(w) < EPS and (x, y, z) < (0, 0, 0)):
+        x, y, z, w = -x, -y, -z, -w
+    t = m.ExtractTranslation()
+    return SurfacePose((t[0], t[1], t[2]), (x, y, z, w)), None
+
+
+def surfaces(stage: Usd.Stage) -> list[Usd.Prim]:
+    """role이 "surface"인 prim 전부(에셋 안에 있어도 된다). 경로 순서."""
+    root = stage.GetDefaultPrim()
+    return [p for p in Usd.PrimRange(root) if role(p) == "surface"] if root else []
+
+
 def is_identity(prim: Usd.Prim) -> bool:
     m = UsdGeom.Xformable(prim).GetLocalTransformation()
     return all(abs(m[i][j] - (1 if i == j else 0)) < EPS for i in range(4) for j in range(4))

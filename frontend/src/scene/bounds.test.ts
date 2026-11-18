@@ -12,6 +12,14 @@ describe('siteBounds', () => {
     expect(siteBounds(config, 1)).toEqual({ min: [-1, -1, 0], max: [3, 11, 3] });
   });
 
+  it('강판 면(surfaces)의 모서리도 감싼다(ADR 0003)', () => {
+    const withSurface = {
+      ...config,
+      surfaces: [{ id: 's', name: 's', size_mm: [20000, 1000], pose: { position_m: [-5, 0, 0], orientation_xyzw: [0, 0, 0, 1] } }],
+    } as unknown as SiteConfig;
+    expect(siteBounds(withSurface, 1)).toEqual({ min: [-6, -1, 0], max: [16, 11, 3] });
+  });
+
   it('영역 밖 점을 경계로 붙인다', () => {
     const b = siteBounds(config, 1);
     expect(clampToBounds([100, -100, -5], b)).toEqual([3, -1, 0]);

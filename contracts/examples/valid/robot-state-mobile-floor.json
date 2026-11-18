@@ -1,0 +1,25 @@
+{
+  "schema": "robot-state",
+  "why": "이동 로봇이 어느 면에도 붙지 않고 바닥을 걷는다(surface null)",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "joints": {
+      "fl_knee": 0
+    },
+    "base": {
+      "position_m": [
+        0,
+        0,
+        0.14
+      ],
+      "orientation_xyzw": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "surface": null
+    }
+  }
+}

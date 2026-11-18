@@ -58,3 +58,23 @@ describe('twin store', () => {
     expect(cell().snap).toBeNull();
   });
 });
+
+describe('이동 로봇(ADR 0003)', () => {
+  beforeEach(() => useTwinStore.getState().reset());
+  const base = (x: number) => ({ position_m: [x, 0, 0.14], orientation_xyzw: [0, 0, 0, 1], surface: null });
+
+  it('몸통 자세는 관절 샘플과 같은 샘플에 남고, 발 접촉은 마지막 값을 둔다', () => {
+    apply('robot/state', { joints: { fl_knee: 1 }, base: base(0), contacts: { fl_foot: true } }, 0);
+    apply('robot/state', { joints: { fl_knee: 2 }, base: base(1), contacts: { fl_foot: false } }, 100);
+    expect(cell().jointSamples.map((s) => s.base?.position_m[0])).toEqual([0, 1]);
+    expect(cell().base?.position_m).toEqual([1, 0, 0.14]);
+    expect(cell().contacts).toEqual({ fl_foot: false });
+  });
+
+  it('고정 로봇(base 없음)은 base·contacts가 null이다', () => {
+    apply('robot/state', { joints: { joint_1: 0 } });
+    expect(cell().base).toBeNull();
+    expect(cell().contacts).toBeNull();
+    expect(cell().jointSamples[0].base).toBeUndefined();
+  });
+});

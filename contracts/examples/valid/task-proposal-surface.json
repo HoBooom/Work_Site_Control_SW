@@ -1,0 +1,21 @@
+{
+  "schema": "task-proposal",
+  "why": "이동 로봇: 경로가 사이트의 강판 면(surface) 좌표(mm)",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "task_id": "t-1",
+    "surface": "side-shell",
+    "path": [
+      [
+        100,
+        200
+      ],
+      [
+        900,
+        220
+      ]
+    ],
+    "confidence": 0.9
+  }
+}

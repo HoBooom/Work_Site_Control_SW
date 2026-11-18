@@ -4,7 +4,7 @@ import { CAMERA_MAX_DISTANCE_M } from '../../../frontend/src/scene/camera-limits
 import { siteBounds } from '../../../frontend/src/scene/bounds';
 import { plateToSite } from '../../../frontend/src/scene/plate';
 import { INTERP_DELAY_MS } from '../../../frontend/src/scene/joints';
-import { expectedJoints, fixture, siteConfig } from './data';
+import { expectedJoints, fixture, plateOf, siteConfig } from './data';
 import { openLab } from './helpers';
 
 const SITE = 'shipyard';
@@ -39,7 +39,7 @@ test.describe('씬 @L3', () => {
       expect(plate.exists && plate.visible).toBe(true);
       // 판 그룹 원점 = 판 좌표 (0,0) 윗면
       expectClose(plate.position, plateToSite(cell, [0, 0]), 0.1 * MM, `${cell.id} 판 원점`);
-      const [w, h] = cell.plate.size_mm.map((v) => v * MM);
+      const [w, h] = plateOf(cell).size_mm.map((v) => v * MM);
       expectClose(plate.size!.slice(0, 2), [w, h], 0.1 * MM, `${cell.id} 판 크기`);
     }
     lab.expectClean();
@@ -102,8 +102,9 @@ test.describe('씬 @L3', () => {
     expect(seam).toHaveLength(proposal.path.length);
     seam.forEach((p, i) => expectClose(p.slice(0, 2), plateToSite(C1, proposal.path[i]).slice(0, 2), 1 * MM, `점 ${i}`));
     // 높이는 판 윗면 바로 위(2mm 이내)
-    seam.forEach((p) => expect(p[2] - C1.plate.pose.position_m[2]).toBeGreaterThanOrEqual(0));
-    seam.forEach((p) => expect(p[2] - C1.plate.pose.position_m[2]).toBeLessThanOrEqual(2 * MM));
+    const plateZ = plateOf(C1).pose.position_m[2];
+    seam.forEach((p) => expect(p[2] - plateZ).toBeGreaterThanOrEqual(0));
+    seam.forEach((p) => expect(p[2] - plateZ).toBeLessThanOrEqual(2 * MM));
     expect(await twin(page).seam(C2.id), '셀 2는 작업이 없다').toBeNull();
     lab.expectClean();
   });

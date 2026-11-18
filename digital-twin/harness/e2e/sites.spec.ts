@@ -4,12 +4,17 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { INTERP_DELAY_MS } from '../../../frontend/src/scene/joints';
 import { plateToSite } from '../../../frontend/src/scene/plate';
+import { pathPointToSite } from '../../../frontend/src/scene/surface';
 import { allSites, expectedJoints, fixture, fixturesOfSite, siteConfig, type Line } from './data';
 import { openLab, type Shot } from './helpers';
 
 const MM = 0.001;
 const VIEW = { w: 1280, h: 720 };
-const JOINTS = ['joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6'];
+/** URDF의 움직이는 관절 이름(고정 관절 제외) */
+const urdfJoints = (urdf: string) =>
+  [...readFileSync(new URL(`../../assets/robot/${urdf.replace('/robots/', '')}`, import.meta.url), 'utf8').matchAll(/<joint name="([^"]+)" type="(?!fixed)/g)]
+    .map((m) => m[1])
+    .sort();
 const SITES = allSites();
 const { shots } = JSON.parse(readFileSync(new URL('./shots.json', import.meta.url), 'utf8')) as { shots: Shot[] };
 const budget = JSON.parse(readFileSync(new URL('../budget.json', import.meta.url), 'utf8')) as { scenes: { site: string }[] };
@@ -57,33 +62,42 @@ test.describe('사이트 @L3', () => {
     const config = siteConfig(site);
 
     test(`M4 ${site}: 배경, 셀마다 작업판·로봇·램프가 site-config대로 뜬다`, async ({ page }) => {
-      const lab = await openLab(page, `site=${site}&fixture=${fixturesOfSite(site)[0]}&t=0&freeze=1&hud=0`);
+      const fx = fixturesOfSite(site)[0];
+      const lab = await openLab(page, `site=${site}&fixture=${fx}&t=0&freeze=1&hud=0`);
       expect(await page.evaluate((s) => window.__twin!.state().site, site)).toBe(site);
       expect(await page.evaluate((s) => window.__twin!.count(`background:${s}`, 'Mesh'), site), '배경 메시').toBeGreaterThan(0);
       for (const cell of config.cells) {
         const plate = await api(page, site).object(cell.id, 'plate');
-        expect(plate.exists && plate.visible, `${cell.id} 작업판`).toBe(true);
-        expectClose(plate.position, plateToSite(cell, [0, 0]), 0.1 * MM, `${cell.id} 판 원점`);
-        // 판 크기: 셀·판 회전을 합친 각도로 AABB를 계산한다
-        const yaw = ((cell.pose.yaw_deg + cell.plate.pose.yaw_deg) * Math.PI) / 180;
-        const [w, h] = cell.plate.size_mm.map((v) => v * MM);
-        const c = Math.abs(Math.cos(yaw));
-        const s = Math.abs(Math.sin(yaw));
-        expectClose(plate.size!.slice(0, 2), [w * c + h * s, w * s + h * c], 0.1 * MM, `${cell.id} 판 크기`);
+        // 작업판은 고정 로봇 셀만 갖는다. 이동 로봇(ADR 0003) 셀에는 없어야 한다
+        expect(plate.exists, `${cell.id} 작업판 유무 = site-config`).toBe(!!cell.plate);
+        if (cell.plate) {
+          expect(plate.visible, `${cell.id} 작업판`).toBe(true);
+          expectClose(plate.position, plateToSite(cell, [0, 0]), 0.1 * MM, `${cell.id} 판 원점`);
+          // 판 크기: 셀·판 회전을 합친 각도로 AABB를 계산한다
+          const yaw = ((cell.pose.yaw_deg + cell.plate.pose.yaw_deg) * Math.PI) / 180;
+          const [w, h] = cell.plate.size_mm.map((v) => v * MM);
+          const c = Math.abs(Math.cos(yaw));
+          const s = Math.abs(Math.sin(yaw));
+          expectClose(plate.size!.slice(0, 2), [w * c + h * s, w * s + h * c], 0.1 * MM, `${cell.id} 판 크기`);
+        }
 
         const robot = await api(page, site).object(cell.id, 'robot');
         expect(robot.exists && robot.visible, `${cell.id} 로봇`).toBe(true);
-        expect(robot.size?.[2] ?? 0, `${cell.id} 로봇 높이(m)`).toBeGreaterThan(1.0);
-        const base = plateToSite({ ...cell, plate: { ...cell.plate, pose: { position_m: [0, 0, 0], yaw_deg: 0 } } }, [0, 0]);
+        // 링크 메시까지 그려졌는지(관절만 있고 메시가 없으면 크기가 작다)
+        expect(Math.max(...(robot.size ?? [0])), `${cell.id} 로봇 크기(m)`).toBeGreaterThan(0.5);
+        // 로봇 기준점: 이동 로봇이 base를 보냈으면 그 자세, 아니면 셀·로봇 자세(ADR 0003)
+        const first = fixture(fx).find((l) => l.topic === `innoworks/${site}/${cell.id}/robot/state`);
+        const sent = (first?.payload as { base?: { position_m: [number, number, number] } } | undefined)?.base;
+        const base = cell.pose.position_m;
         const yc = (cell.pose.yaw_deg * Math.PI) / 180;
         const [rx, ry, rz] = cell.robot.pose.position_m;
         expectClose(
           robot.position,
-          [base[0] + Math.cos(yc) * rx - Math.sin(yc) * ry, base[1] + Math.sin(yc) * rx + Math.cos(yc) * ry, base[2] + rz],
+          sent?.position_m ?? [base[0] + Math.cos(yc) * rx - Math.sin(yc) * ry, base[1] + Math.sin(yc) * rx + Math.cos(yc) * ry, base[2] + rz],
           0.1 * MM,
           `${cell.id} 로봇 기준점`,
         );
-        expect(Object.keys((await api(page, site).joints(cell.id)) ?? {}).sort()).toEqual(JOINTS);
+        expect(Object.keys((await api(page, site).joints(cell.id)) ?? {}).sort()).toEqual(urdfJoints(cell.robot.urdf!));
         expect((await api(page, site).object(cell.id, 'lamp')).exists, `${cell.id} 상태 램프`).toBe(true);
       }
       lab.expectClean();
@@ -94,13 +108,17 @@ test.describe('사이트 @L3', () => {
       const proposal = weld.lines.find((l) => l.topic.endsWith('/task/proposal'))!;
       const [, , cellId] = proposal.topic.split('/');
       const cell = config.cells.find((c) => c.id === cellId)!;
-      const path = (proposal.payload as { path: [number, number][] }).path;
+      const { path, surface } = proposal.payload as { path: [number, number][]; surface?: string };
       const lab = await openLab(page, `site=${site}&fixture=${weld.name}&t=${proposal.t}&freeze=1&hud=0`);
       await api(page, site).goto(proposal.t + 200);
       const seam = (await api(page, site).seam(cell.id))!;
       expect(seam, '제안 뒤에는 용접선이 있다').not.toBeNull();
       expect(seam.points).toHaveLength(path.length);
-      seam.points.forEach((p, i) => expectClose(p.slice(0, 2), plateToSite(cell, path[i]).slice(0, 2), 1 * MM, `점 ${i}`));
+      // 판·면 위 1.5mm에 그리므로 3D로 2mm 이내
+      seam.points.forEach((p, i) => {
+        const e = pathPointToSite(config, cell, surface, path[i]);
+        expect(Math.hypot(...p.map((v, k) => v - e[k])), `점 ${i}`).toBeLessThanOrEqual(2 * MM);
+      });
       const robotTimes = weld.lines.filter((l) => l.topic === `innoworks/${site}/${cell.id}/robot/state`).map((l) => l.t);
       const end = robotTimes.at(-1)!;
       for (const t of [0.2, 0.45, 0.7].map((k) => Math.round(end * k) + 37)) {
@@ -119,7 +137,7 @@ test.describe('사이트 @L3', () => {
         const lab = await openLab(page, `site=${site}&fixture=${fixturesOfSite(site)[0]}&freeze=1&preset=${preset.id}&hud=0`);
         const targets = config.cells.filter((c) => c.id === preset.id);
         for (const cell of targets.length ? targets : config.cells) {
-          for (const part of ['plate', 'robot', 'lamp'] as const) {
+          for (const part of (cell.plate ? ['plate', 'robot', 'lamp'] : ['robot', 'lamp']) as ('plate' | 'robot' | 'lamp')[]) {
             const p = await api(page, site).screen(cell.id, part);
             expect(p, `${preset.id}: ${cell.id} ${part}`).not.toBeNull();
             expect(p![0]).toBeGreaterThan(0);

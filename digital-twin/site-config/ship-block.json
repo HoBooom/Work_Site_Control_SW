@@ -1,0 +1,90 @@
+{
+  "v": 1,
+  "site": "ship-block",
+  "name": "조선소 이중저 블록 내부",
+  "background": {
+    "glb": "/sites/ship-block.glb"
+  },
+  "environment": {
+    "hdri": null,
+    "exposure": 1
+  },
+  "surfaces": [
+    {
+      "id": "bottom-shell",
+      "name": "외판(바닥) 윗면",
+      "size_mm": [9600, 6400],
+      "pose": {
+        "position_m": [-4.8, -3.2, 0.32],
+        "orientation_xyzw": [0, 0, 0, 1]
+      }
+    },
+    {
+      "id": "side-shell",
+      "name": "측면 외판 안쪽 면",
+      "size_mm": [9600, 1500],
+      "pose": {
+        "position_m": [-4.8, 3.193, 0.32],
+        "orientation_xyzw": [0.707107, 0, 0, 0.707107]
+      }
+    }
+  ],
+  "cells": [
+    {
+      "id": "spider-1",
+      "name": "스파이더 1",
+      "pose": {
+        "position_m": [-0.9, 1.2, 0.32],
+        "yaw_deg": 0
+      },
+      "robot": {
+        "urdf": "/robots/spider-welder/robot.urdf",
+        "pose": {
+          "position_m": [0, 0, 0.14],
+          "yaw_deg": 0
+        }
+      },
+      "camera": {
+        "stream": "/stream/spider-1"
+      }
+    },
+    {
+      "id": "spider-2",
+      "name": "스파이더 2",
+      "pose": {
+        "position_m": [3.2, 1.2, 0.32],
+        "yaw_deg": 0
+      },
+      "robot": {
+        "urdf": "/robots/spider-welder/robot.urdf",
+        "pose": {
+          "position_m": [0, 0, 0.14],
+          "yaw_deg": 0
+        }
+      },
+      "camera": {
+        "stream": "/stream/spider-2"
+      }
+    }
+  ],
+  "presets": [
+    {
+      "id": "overview",
+      "name": "전경",
+      "eye_m": [-4.5, -8.5, 9.5],
+      "target_m": [0.4, 1.0, 0.6]
+    },
+    {
+      "id": "spider-1",
+      "name": "스파이더 1 클로즈업(바닥 론지 용접)",
+      "eye_m": [-1.35, 2.1, 2.4],
+      "target_m": [0.1, 0.95, 0.35]
+    },
+    {
+      "id": "spider-2",
+      "name": "스파이더 2 클로즈업(측면 외판 수직 용접)",
+      "eye_m": [2.7, 0.3, 2.9],
+      "target_m": [1.95, 3.0, 1.0]
+    }
+  ]
+}

@@ -23,7 +23,7 @@ frontend/src/
 ├─ bus/       MQTT 연결·재연결, 구독, 발행, 메시지 타입(contracts에서 생성)
 ├─ store/     Zustand. 셀별 상태(task, joints, alarms, metrics, 연결 상태)
 ├─ scene/     R3F 씬: 배경 GLB, 로봇(URDF), 작업판, 용접선, 마커, 카메라 프리셋, 선택
-├─ lab/       트윈 랩: 씬만 띄우는 개발용 화면, 픽스처 재생기, window.__twin
+├─ lab/       트윈 랩: 씬만 띄우는 개발용 화면, 픽스처 재생기, window.__twin. 로봇 랩(/lab/robot): 로봇 하나와 관절 슬라이더
 ├─ panel/     카메라 뷰, canvas 오버레이, 수정 모드, 작업 제어
 ├─ alarms/    알람 목록, 읽음 처리
 ├─ metrics/   추론 지연·신뢰도·외란 강도 표시

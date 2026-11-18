@@ -1,0 +1,488 @@
+<?xml version="1.0"?>
+<!--
+  생성 파일(digital-twin/assets/gen/make_robot.py). 직접 고치지 않는다.
+  4족 자석발 이동 용접 로봇 대역(ADR 0003, digital-twin/assets/gen/spider.py).
+  좌표: Z-up, m. base_link = 몸통 중심. 관절 0° = 서 있는 자세(발판 바닥이 base_link 아래 0.14m).
+-->
+<robot name="spider-welder">
+  <material name="aluminum"><color rgba="0.56 0.58 0.60 1"/></material>
+  <material name="carbon"><color rgba="0.035 0.037 0.04 1"/></material>
+  <material name="graphite"><color rgba="0.10 0.105 0.11 1"/></material>
+  <material name="cobot"><color rgba="0.70 0.71 0.72 1"/></material>
+  <material name="brass"><color rgba="0.75 0.52 0.25 1"/></material>
+  <material name="lens"><color rgba="0.01 0.01 0.012 1"/></material>
+
+  <link name="base_link">
+    <visual>
+      <geometry><mesh filename="meshes/base_link_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/base_link_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/base_link_lens.stl"/></geometry>
+      <material name="lens"/>
+    </visual>
+  </link>
+
+  <link name="fl_hip">
+    <visual>
+      <geometry><mesh filename="meshes/fl_hip_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fl_hip_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="fl_thigh">
+    <visual>
+      <geometry><mesh filename="meshes/fl_thigh_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fl_thigh_carbon.stl"/></geometry>
+      <material name="carbon"/>
+    </visual>
+  </link>
+
+  <link name="fl_shin">
+    <visual>
+      <geometry><mesh filename="meshes/fl_shin_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fl_shin_carbon.stl"/></geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fl_shin_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="fl_ankle">
+    <visual>
+      <geometry><mesh filename="meshes/fl_ankle_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fl_ankle_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="fl_foot">
+    <visual>
+      <geometry><mesh filename="meshes/fl_foot_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fl_foot_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fl_foot_lens.stl"/></geometry>
+      <material name="lens"/>
+    </visual>
+  </link>
+
+  <link name="rl_hip">
+    <visual>
+      <geometry><mesh filename="meshes/rl_hip_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rl_hip_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="rl_thigh">
+    <visual>
+      <geometry><mesh filename="meshes/rl_thigh_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rl_thigh_carbon.stl"/></geometry>
+      <material name="carbon"/>
+    </visual>
+  </link>
+
+  <link name="rl_shin">
+    <visual>
+      <geometry><mesh filename="meshes/rl_shin_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rl_shin_carbon.stl"/></geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rl_shin_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="rl_ankle">
+    <visual>
+      <geometry><mesh filename="meshes/rl_ankle_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rl_ankle_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="rl_foot">
+    <visual>
+      <geometry><mesh filename="meshes/rl_foot_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rl_foot_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rl_foot_lens.stl"/></geometry>
+      <material name="lens"/>
+    </visual>
+  </link>
+
+  <link name="rr_hip">
+    <visual>
+      <geometry><mesh filename="meshes/rr_hip_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rr_hip_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="rr_thigh">
+    <visual>
+      <geometry><mesh filename="meshes/rr_thigh_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rr_thigh_carbon.stl"/></geometry>
+      <material name="carbon"/>
+    </visual>
+  </link>
+
+  <link name="rr_shin">
+    <visual>
+      <geometry><mesh filename="meshes/rr_shin_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rr_shin_carbon.stl"/></geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rr_shin_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="rr_ankle">
+    <visual>
+      <geometry><mesh filename="meshes/rr_ankle_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rr_ankle_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="rr_foot">
+    <visual>
+      <geometry><mesh filename="meshes/rr_foot_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rr_foot_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/rr_foot_lens.stl"/></geometry>
+      <material name="lens"/>
+    </visual>
+  </link>
+
+  <link name="fr_hip">
+    <visual>
+      <geometry><mesh filename="meshes/fr_hip_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fr_hip_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="fr_thigh">
+    <visual>
+      <geometry><mesh filename="meshes/fr_thigh_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fr_thigh_carbon.stl"/></geometry>
+      <material name="carbon"/>
+    </visual>
+  </link>
+
+  <link name="fr_shin">
+    <visual>
+      <geometry><mesh filename="meshes/fr_shin_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fr_shin_carbon.stl"/></geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fr_shin_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="fr_ankle">
+    <visual>
+      <geometry><mesh filename="meshes/fr_ankle_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fr_ankle_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="fr_foot">
+    <visual>
+      <geometry><mesh filename="meshes/fr_foot_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fr_foot_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/fr_foot_lens.stl"/></geometry>
+      <material name="lens"/>
+    </visual>
+  </link>
+
+  <link name="arm_link_1">
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_1_cobot.stl"/></geometry>
+      <material name="cobot"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_1_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="arm_link_2">
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_2_cobot.stl"/></geometry>
+      <material name="cobot"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_2_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="arm_link_3">
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_3_cobot.stl"/></geometry>
+      <material name="cobot"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_3_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="arm_link_4">
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_4_cobot.stl"/></geometry>
+      <material name="cobot"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_4_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="arm_link_5">
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_5_cobot.stl"/></geometry>
+      <material name="cobot"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_5_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+
+  <link name="arm_link_6">
+    <visual>
+      <geometry><mesh filename="meshes/arm_link_6_aluminum.stl"/></geometry>
+      <material name="aluminum"/>
+    </visual>
+  </link>
+
+  <link name="torch">
+    <visual>
+      <geometry><mesh filename="meshes/torch_brass.stl"/></geometry>
+      <material name="brass"/>
+    </visual>
+    <visual>
+      <geometry><mesh filename="meshes/torch_graphite.stl"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+  <joint name="fl_hip_yaw" type="revolute">
+    <parent link="base_link"/><child link="fl_hip"/>
+    <origin xyz="0.15 0.13 0.06" rpy="0 0 0.959931"/><axis xyz="0 0 1"/>
+    <limit lower="-1.047198" upper="1.047198" effort="60" velocity="3"/>
+  </joint>
+  <joint name="fl_hip_pitch" type="revolute">
+    <parent link="fl_hip"/><child link="fl_thigh"/>
+    <origin xyz="0.025 0 0.11"/><axis xyz="0 1 0"/>
+    <limit lower="-1.570796" upper="1.22173" effort="60" velocity="3"/>
+  </joint>
+  <joint name="fl_knee" type="revolute">
+    <parent link="fl_thigh"/><child link="fl_shin"/>
+    <origin xyz="0.275776 0 0.231404"/><axis xyz="0 1 0"/>
+    <limit lower="-2.617994" upper="2.617994" effort="60" velocity="3"/>
+  </joint>
+  <joint name="fl_ankle_pitch" type="revolute">
+    <parent link="fl_shin"/><child link="fl_ankle"/>
+    <origin xyz="0.180188 0 -0.466404"/><axis xyz="0 1 0"/>
+    <limit lower="-1.22173" upper="1.22173" effort="5" velocity="3"/>
+  </joint>
+  <joint name="fl_ankle_roll" type="revolute">
+    <parent link="fl_ankle"/><child link="fl_foot"/>
+    <origin xyz="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-1.22173" upper="1.22173" effort="5" velocity="3"/>
+  </joint>
+  <joint name="rl_hip_yaw" type="revolute">
+    <parent link="base_link"/><child link="rl_hip"/>
+    <origin xyz="-0.15 0.13 0.06" rpy="0 0 2.181662"/><axis xyz="0 0 1"/>
+    <limit lower="-1.047198" upper="1.047198" effort="60" velocity="3"/>
+  </joint>
+  <joint name="rl_hip_pitch" type="revolute">
+    <parent link="rl_hip"/><child link="rl_thigh"/>
+    <origin xyz="0.025 0 0.11"/><axis xyz="0 1 0"/>
+    <limit lower="-1.570796" upper="1.22173" effort="60" velocity="3"/>
+  </joint>
+  <joint name="rl_knee" type="revolute">
+    <parent link="rl_thigh"/><child link="rl_shin"/>
+    <origin xyz="0.275776 0 0.231404"/><axis xyz="0 1 0"/>
+    <limit lower="-2.617994" upper="2.617994" effort="60" velocity="3"/>
+  </joint>
+  <joint name="rl_ankle_pitch" type="revolute">
+    <parent link="rl_shin"/><child link="rl_ankle"/>
+    <origin xyz="0.180188 0 -0.466404"/><axis xyz="0 1 0"/>
+    <limit lower="-1.22173" upper="1.22173" effort="5" velocity="3"/>
+  </joint>
+  <joint name="rl_ankle_roll" type="revolute">
+    <parent link="rl_ankle"/><child link="rl_foot"/>
+    <origin xyz="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-1.22173" upper="1.22173" effort="5" velocity="3"/>
+  </joint>
+  <joint name="rr_hip_yaw" type="revolute">
+    <parent link="base_link"/><child link="rr_hip"/>
+    <origin xyz="-0.15 -0.13 0.06" rpy="0 0 -2.181662"/><axis xyz="0 0 1"/>
+    <limit lower="-1.047198" upper="1.047198" effort="60" velocity="3"/>
+  </joint>
+  <joint name="rr_hip_pitch" type="revolute">
+    <parent link="rr_hip"/><child link="rr_thigh"/>
+    <origin xyz="0.025 0 0.11"/><axis xyz="0 1 0"/>
+    <limit lower="-1.570796" upper="1.22173" effort="60" velocity="3"/>
+  </joint>
+  <joint name="rr_knee" type="revolute">
+    <parent link="rr_thigh"/><child link="rr_shin"/>
+    <origin xyz="0.275776 0 0.231404"/><axis xyz="0 1 0"/>
+    <limit lower="-2.617994" upper="2.617994" effort="60" velocity="3"/>
+  </joint>
+  <joint name="rr_ankle_pitch" type="revolute">
+    <parent link="rr_shin"/><child link="rr_ankle"/>
+    <origin xyz="0.180188 0 -0.466404"/><axis xyz="0 1 0"/>
+    <limit lower="-1.22173" upper="1.22173" effort="5" velocity="3"/>
+  </joint>
+  <joint name="rr_ankle_roll" type="revolute">
+    <parent link="rr_ankle"/><child link="rr_foot"/>
+    <origin xyz="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-1.22173" upper="1.22173" effort="5" velocity="3"/>
+  </joint>
+  <joint name="fr_hip_yaw" type="revolute">
+    <parent link="base_link"/><child link="fr_hip"/>
+    <origin xyz="0.15 -0.13 0.06" rpy="0 0 -0.959931"/><axis xyz="0 0 1"/>
+    <limit lower="-1.047198" upper="1.047198" effort="60" velocity="3"/>
+  </joint>
+  <joint name="fr_hip_pitch" type="revolute">
+    <parent link="fr_hip"/><child link="fr_thigh"/>
+    <origin xyz="0.025 0 0.11"/><axis xyz="0 1 0"/>
+    <limit lower="-1.570796" upper="1.22173" effort="60" velocity="3"/>
+  </joint>
+  <joint name="fr_knee" type="revolute">
+    <parent link="fr_thigh"/><child link="fr_shin"/>
+    <origin xyz="0.275776 0 0.231404"/><axis xyz="0 1 0"/>
+    <limit lower="-2.617994" upper="2.617994" effort="60" velocity="3"/>
+  </joint>
+  <joint name="fr_ankle_pitch" type="revolute">
+    <parent link="fr_shin"/><child link="fr_ankle"/>
+    <origin xyz="0.180188 0 -0.466404"/><axis xyz="0 1 0"/>
+    <limit lower="-1.22173" upper="1.22173" effort="5" velocity="3"/>
+  </joint>
+  <joint name="fr_ankle_roll" type="revolute">
+    <parent link="fr_ankle"/><child link="fr_foot"/>
+    <origin xyz="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-1.22173" upper="1.22173" effort="5" velocity="3"/>
+  </joint>
+  <joint name="arm_1" type="revolute">
+    <parent link="base_link"/><child link="arm_link_1"/>
+    <origin xyz="0 0 0.09"/><axis xyz="0 0 1"/>
+    <limit lower="-6.283185" upper="6.283185" effort="30" velocity="3"/>
+  </joint>
+  <joint name="arm_2" type="revolute">
+    <parent link="arm_link_1"/><child link="arm_link_2"/>
+    <origin xyz="0 0 0.11"/><axis xyz="0 1 0"/>
+    <limit lower="-6.283185" upper="6.283185" effort="30" velocity="3"/>
+  </joint>
+  <joint name="arm_3" type="revolute">
+    <parent link="arm_link_2"/><child link="arm_link_3"/>
+    <origin xyz="0 0 0.3"/><axis xyz="0 1 0"/>
+    <limit lower="-2.879793" upper="2.879793" effort="30" velocity="3"/>
+  </joint>
+  <joint name="arm_4" type="revolute">
+    <parent link="arm_link_3"/><child link="arm_link_4"/>
+    <origin xyz="0.27 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-6.283185" upper="6.283185" effort="30" velocity="3"/>
+  </joint>
+  <joint name="arm_5" type="revolute">
+    <parent link="arm_link_4"/><child link="arm_link_5"/>
+    <origin xyz="0.06 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-6.283185" upper="6.283185" effort="30" velocity="3"/>
+  </joint>
+  <joint name="arm_6" type="revolute">
+    <parent link="arm_link_5"/><child link="arm_link_6"/>
+    <origin xyz="0.076 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-6.283185" upper="6.283185" effort="30" velocity="3"/>
+  </joint>
+  <joint name="tool_joint" type="fixed">
+    <parent link="arm_link_6"/><child link="torch"/>
+    <origin xyz="0.015 0 0"/>
+  </joint>
+</robot>

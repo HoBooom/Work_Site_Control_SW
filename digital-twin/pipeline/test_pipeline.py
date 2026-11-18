@@ -202,3 +202,50 @@ class Presets(unittest.TestCase):
         self.assertEqual(out[0], prev[0])
         self.assertEqual([p["id"] for p in out], ["overview", "weld-booth-1"])
         self.assertEqual(build.presets([self.CELL], out), out, "두 번 돌려도 같다")
+
+
+SURFACE = """
+    def Xform "Hull"
+    {
+        def Xform "SideShell" (customData = {string "innoworks:role" = "surface"})
+        {
+            string innoworks:name = "외판"
+            float2 innoworks:sizeMm = (6000, 1500)
+            double3 xformOp:translate = (1, 2, 0.3)
+            float3 xformOp:rotateXYZ = (90, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+        }
+    }
+"""
+
+
+class MobileSite(unittest.TestCase):
+    """ADR 0003: 작업판 없는 이동 로봇 셀과 강판 면(surface)"""
+
+    def mobile(self, surface: str = SURFACE) -> str:
+        text = SITE_OK.replace("%ROBOT_CHILD%", "")
+        text = text.replace('''        def Xform "Plate" (customData = {string "innoworks:role" = "plate"})
+        {
+            float2 innoworks:sizeMm = (1000, 500)
+        }
+''', "")
+        return text.replace('    def Xform "CellA"', surface + '    def Xform "CellA"')
+
+    def test_plate_less_cell_and_surface_pass(self):
+        self.assertEqual(Validate.run_site(self, self.mobile()), [])
+
+    def test_surface_pose_has_full_rotation(self):
+        stage = Usd.Stage.CreateInMemory()
+        stage.GetRootLayer().ImportFromString(self.mobile())
+        (s,) = tu.surfaces(stage)
+        pose, why = tu.site_pose(s)
+        self.assertIsNone(why)
+        np.testing.assert_allclose(pose.position_m, (1, 2, 0.3), atol=1e-9)
+        h = math.sqrt(0.5)
+        np.testing.assert_allclose(pose.orientation_xyzw, (h, 0, 0, h), atol=1e-6)
+
+    def test_surface_rules(self):
+        no_size = SURFACE.replace("float2 innoworks:sizeMm = (6000, 1500)", "")
+        self.assertTrue(any("SideShell" in e and "sizeMm" in e for e in Validate.run_site(self, self.mobile(no_size))))
+        inside = self.mobile("").replace('string innoworks:name = "셀 A"', 'string innoworks:name = "셀 A"' + SURFACE)
+        self.assertTrue(any("셀 밖" in e for e in Validate.run_site(self, inside)))
