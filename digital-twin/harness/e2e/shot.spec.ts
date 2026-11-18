@@ -1,5 +1,6 @@
 // shot.sh가 부르는 도구. 검사(check.sh)에는 들어가지 않는다.
 import { mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { test } from '@playwright/test';
 import { openLab } from './helpers';
 
@@ -13,8 +14,9 @@ test('장면 한 장 찍기 @shot', async ({ page }) => {
   const lab = await openLab(page, q.toString());
   const dir = new URL('../out/shots/', import.meta.url);
   mkdirSync(dir, { recursive: true });
-  const file = new URL(`${name}.png`, dir);
-  await page.screenshot({ path: file.pathname });
-  console.log(`SHOT ${decodeURIComponent(file.pathname)}`);
+  // URL.pathname은 한글을 퍼센트 인코딩한 채로 두므로 fileURLToPath로 바꾼다
+  const file = fileURLToPath(new URL(`${name}.png`, dir));
+  await page.screenshot({ path: file });
+  console.log(`SHOT ${file}`);
   if (lab.problems.length) console.log(`콘솔 문제:\n${lab.problems.join('\n')}`);
 });

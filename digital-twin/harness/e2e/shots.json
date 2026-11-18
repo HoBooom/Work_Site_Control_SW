@@ -1,6 +1,65 @@
 {
-  "note": "L4 기준 장면 목록. 기준 이미지는 golden/{site}-{fixture}-{t}-{preset}-{quality}.png. 장면을 더하면 기준 이미지를 만들고 사람이 승인한다.",
+  "note": "L4 기준 장면 목록. 기준 이미지는 golden/{site}-{fixture}-{t}-{preset}-{quality}[-sel-{cell}-{part}].png. select가 있으면 그 객체를 눌러 선택한 뒤 찍는다. 장면을 더하면 후보를 사람이 승인한 뒤 --update-golden.",
   "shots": [
-    { "site": "shipyard", "fixture": "idle", "t": 1000, "preset": "overview", "quality": "high" }
+    {
+      "site": "shipyard",
+      "fixture": "idle",
+      "t": 1000,
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "shipyard",
+      "fixture": "weld-basic",
+      "t": 4000,
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "shipyard",
+      "fixture": "weld-edit",
+      "t": 2000,
+      "preset": "weld-cell-1",
+      "quality": "high"
+    },
+    {
+      "site": "shipyard",
+      "fixture": "alarm",
+      "t": 4000,
+      "preset": "weld-cell-1",
+      "quality": "high"
+    },
+    {
+      "site": "shipyard",
+      "fixture": "offline",
+      "t": 5000,
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "shipyard",
+      "fixture": "weld-basic",
+      "t": 4000,
+      "preset": "weld-cell-1",
+      "quality": "high",
+      "select": {
+        "cell": "weld-cell-1",
+        "part": "robot"
+      }
+    },
+    {
+      "site": "factory",
+      "fixture": "factory-idle",
+      "t": 1000,
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "factory",
+      "fixture": "factory-weld-basic",
+      "t": 4000,
+      "preset": "weld-booth-1",
+      "quality": "high"
+    }
   ]
 }

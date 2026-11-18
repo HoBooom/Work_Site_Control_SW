@@ -1,0 +1,102 @@
+#usda 1.0
+(
+    defaultPrim = "Factory"
+    metersPerUnit = 1
+    upAxis = "Z"
+    doc = """제조공장 용접 부스(M4, AS-07). 셀 1개.
+규칙(digital-twin/docs/README.md): prim 경로 = 토픽 = 설정 키. /Factory/WeldBooth1 = factory/weld-booth-1.
+셀은 90° 돌려 놓는다: 작업자 쪽(셀 -Y)이 공장 통로(사이트 +X)를 본다. 씬이 셀 회전을 site-config로만 다루는지 이 사이트가 확인한다.
+셀의 Robot, Plate는 기준점만 둔다. 웹이 그린다(PL-04)."""
+)
+
+def Xform "Factory" (
+    kind = "assembly"
+    customData = {
+        string "innoworks:role" = "site"
+    }
+)
+{
+    string innoworks:name = "제조공장 용접 부스"
+
+    def Xform "Env"
+    {
+        def Cube "Floor"
+        {
+            double size = 1
+            token innoworks:material = "concrete_floor"
+            double3 xformOp:translate = (2, 0, -0.05)
+            float3 xformOp:scale = (80, 80, 0.1)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def "Hall" (
+            references = @../assets/props/factory_hall.usda@
+        )
+        {
+        }
+    }
+
+    def Xform "WeldBooth1" (
+        customData = {
+            string "innoworks:role" = "cell"
+        }
+    )
+    {
+        string innoworks:name = "용접 부스 1"
+        double3 xformOp:translate = (0, 0, 0)
+        float xformOp:rotateZ = 90
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+
+        def Xform "Robot" (
+            customData = {
+                string "innoworks:role" = "robot"
+            }
+        )
+        {
+            string innoworks:urdf = "/robots/standin-6axis/robot.urdf"
+            double3 xformOp:translate = (0, 0, 0.3)
+            float xformOp:rotateZ = 0
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+        }
+
+        def Xform "Plate" (
+            customData = {
+                string "innoworks:role" = "plate"
+            }
+        )
+        {
+            float2 innoworks:sizeMm = (1000, 500)
+            double3 xformOp:translate = (0.45, -0.25, 0.8)
+            float xformOp:rotateZ = 0
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+        }
+
+        def "Pedestal" (
+            references = @../assets/props/robot_pedestal.usda@
+        )
+        {
+        }
+
+        def "Table" (
+            references = @../assets/props/weld_table.usda@
+        )
+        {
+            double3 xformOp:translate = (0.95, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Marking" (
+            references = @../assets/props/cell_marking.usda@
+        )
+        {
+            double3 xformOp:translate = (0.6, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Kit" (
+            references = @../assets/props/weld_booth_kit.usda@
+        )
+        {
+        }
+    }
+}

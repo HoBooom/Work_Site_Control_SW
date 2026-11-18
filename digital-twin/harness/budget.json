@@ -2,11 +2,45 @@
   "note": "spec.md 2절 성능 예산. 사람이 정한다. 통과시키려고 늘리지 않는다. fps는 60fps 목표를 vsync 흔들림을 감안해 평균 57 이상, 프레임 p95 20ms 이하로 잰다.",
   "measure_ms": 10000,
   "tiers": {
-    "high": { "fps_avg_min": 57, "frame_ms_p95_max": 20 },
-    "low": { "fps_avg_min": 28, "frame_ms_p95_max": 40 }
+    "high": {
+      "fps_avg_min": 57,
+      "frame_ms_p95_max": 20
+    },
+    "low": {
+      "fps_avg_min": 28,
+      "frame_ms_p95_max": 40
+    }
   },
-  "per_site": { "draw_calls_max": 300, "triangles_max": 1500000, "first_ready_ms_max": 5000 },
+  "per_site": {
+    "draw_calls_max": 300,
+    "triangles_max": 1500000,
+    "first_ready_ms_max": 5000,
+    "glb_mb_max": 25
+  },
   "scenes": [
-    { "site": "shipyard", "fixture": "idle", "preset": "overview", "quality": "high" }
+    {
+      "site": "shipyard",
+      "fixture": "weld-basic",
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "shipyard",
+      "fixture": "weld-basic",
+      "preset": "overview",
+      "quality": "low"
+    },
+    {
+      "site": "factory",
+      "fixture": "factory-weld-basic",
+      "preset": "overview",
+      "quality": "high"
+    },
+    {
+      "site": "factory",
+      "fixture": "factory-weld-basic",
+      "preset": "overview",
+      "quality": "low"
+    }
   ]
 }

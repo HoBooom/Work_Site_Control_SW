@@ -30,7 +30,8 @@ digital-twin/
 │  ├─ validate-data.mjs L0 스키마·site-config·픽스처 검사
 │  ├─ budget.json       L5 성능 예산
 │  ├─ playwright.config.ts
-│  ├─ e2e/              Playwright 테스트(L3 lab, L4 shots, L5 perf), shots.json(장면 목록)
+│  ├─ e2e/              Playwright 테스트(L3 lab·scene·state·interaction·render·sites, L4 shots, L5 perf), shots.json(장면 목록)
+│  │                    sites.spec.ts는 site-config에 있는 모든 사이트를 이름을 적지 않고 같은 기준으로 검사한다(M4)
 │  ├─ golden/           승인된 기준 스크린샷
 │  └─ out/              실행 결과물(git 제외): logs/, shots/, test-results/, stats.json
 └─ pipeline/            build.py, validate.py, check_glb.py (M1)
@@ -61,7 +62,10 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 | `alarm` | 실행 중 알람 발생, 정지, 해제 | DY-05 |
 | `offline` | 실행 중 서버 offline, 복구 | DY-08 |
 | `stale` | `robot/state`가 3초간 끊겼다가 재개 | DY-09 |
-| `two-cells` | 셀 2개가 서로 다른 작업을 동시에 진행 | DY-02 |
+| `two-cells` | 셀 2개가 서로 다른 작업을 동시에 진행. 아직 없음: 지금은 `weld-basic`(셀 1 작업, 셀 2 대기)으로 DY-02를 본다 | DY-02 |
+| `factory-idle`, `factory-weld-basic` | 공장 사이트(셀 1개)의 `idle`, `weld-basic`. 생성기 함수에 사이트·셀을 넘겨 만든다(M4) | M4 |
+
+위 표의 이름 없는 것은 조선소 픽스처다. 다른 사이트의 픽스처는 `{사이트}-` 접두어를 붙인다. 한 픽스처의 토픽은 한 사이트만 쓴다(`e2e/data.ts fixturesOfSite`가 이것으로 사이트별 픽스처를 찾는다).
 
 ## 트윈 랩
 
@@ -82,7 +86,8 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 
 결정성을 위한 규칙.
 
-- 씬의 모든 애니메이션(관절 보간, 카메라 이동, 깜빡임)은 벽시계가 아니라 랩이 주는 가상 시계로 계산한다.
+- 씬의 모든 애니메이션(관절 보간, 데이터 끊김 판정, 깜빡임)은 벽시계가 아니라 랩이 주는 가상 시계로 계산한다.
+- 예외: 카메라 프리셋 전환(IX-03)은 사용자 조작 연출이라 실제 프레임 시간으로 움직인다. 주소 인자로 준 첫 프리셋은 바로 놓이므로 스크린샷에는 영향이 없다.
 - 검사할 때는 화면 크기 1280×720, 픽셀 비율 1로 고정한다.
 - 무작위 값을 쓰는 연출은 시드를 고정한다.
 
@@ -96,10 +101,17 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 | `state()` | 사이트, 픽스처, 가상 시각, 정지 여부, 셀별 상태(store 복사본) | M0 |
 | `stats()`, `resetStats()` | 드로우 콜, 삼각형, 텍스처·지오메트리 수, 평균 fps, 프레임 시간 p95 | M0 |
 | `setClock(t)` | 시나리오 시각을 옮기고 즉시 반영 | M0 |
-| `object(site, cell, part)` | 객체 존재 여부, 월드 좌표, 보임 여부 | M1 |
-| `seam(site, cell)` | 그려진 용접선의 점(씬 좌표)과 구간별 색 | M1 |
-| `setPreset(name)`, `setQuality(tier)` | 랩 상태 변경 | M2 |
-| `pick(x, y)` | 그 화면 좌표를 눌렀을 때 나가는 선택 이벤트 | M2 |
+| `frames(n)` | n프레임 뒤에 풀린다. `setClock` 뒤 씬이 따라오기를 기다릴 때 | M1 |
+| `object(site, cell, part)` | 객체 존재 여부, 보임 여부, 원점과 크기(사이트 좌표) | M1 |
+| `joints(site, cell)` | 씬의 로봇 관절각(deg) | M1 |
+| `camera()` | 카메라 위치, 목표점(사이트 좌표), 거리 | M1 |
+| `seam(site, cell)` | 그려진 용접선: 전체 점, 완료·남은 구간(사이트 좌표), 점선 여부, 구간별 색 | M1, M2 |
+| `view(site, cell)` | 상태 램프(상태·색), 라벨(글자·상태), 알람 마커(아래부터), 로봇 회색 여부, 멈춤 표시 | M2 |
+| `screen(site, cell, part 또는 {alarm})` | 객체 중심의 화면 좌표(px). 테스트가 그 자리를 실제로 눌러 선택을 확인한다 | M2 |
+| `selection()` | 현재 선택 이벤트 `{site, cell, kind, id}` | M2 |
+| `count(name, type?)` | 이름이 같은 객체 수(이전 선이 남았는지 등) | M2 |
+| `render()` | 품질 등급, 환경광 유무, 키 라이트 그림자 설정, 켜진 후처리, 그림자 범위, 로봇·배경의 그림자 설정 | M3 |
+| `setPreset(id)`, `setSite(site)`, `setQuality(tier)` | 랩 상태 변경. 사이트·품질은 Canvas를 다시 만들고 첫 프레임까지 기다린다 | M2 |
 
 ## 검사 단계
 
@@ -110,7 +122,7 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 | L2 단위 | 좌표 변환, 토픽→객체 조회, 관절 보간, 진행률→선 구간 | Vitest | 10초 | 저장할 때마다 |
 | L3 씬 상태 | 픽스처를 특정 시각에 멈추고 `__twin`으로 상태 단언. 콘솔 오류 0건 | Playwright | 1~2분 | 작업 하나를 끝낼 때 |
 | L4 스크린샷 | 정해진 장면을 찍어 기준 이미지와 비교 | Playwright | 1~2분 | 작업 하나를 끝낼 때 |
-| L5 성능 | 픽스처를 10초 재생하며 fps, 드로우 콜, 삼각형, 로딩 시간 측정 | Playwright + `stats()` | 1분 | 마일스톤을 닫을 때, 에셋을 바꿨을 때 |
+| L5 성능 | 픽스처를 10초 재생하며 fps, 드로우 콜, 삼각형, 로딩 시간 측정. 드로우 콜·삼각형은 그림자·후처리 패스까지 한 프레임 합계 | Playwright + `stats()` | 1분 | 마일스톤을 닫을 때, 에셋을 바꿨을 때 |
 | H 검수 | 품질 기준 표와 참조 화면을 나란히 놓고 사람이 승인 | 사람 | — | M3, 기준 이미지 갱신 때 |
 
 ## 명령
@@ -119,6 +131,7 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 digital-twin/harness/check.sh              # L0~L4
 digital-twin/harness/check.sh --level 2    # L0~L2만(빠른 확인)
 digital-twin/harness/check.sh --perf       # L5 포함
+digital-twin/harness/check.sh --candidates # L4 장면을 out/review/에 후보로 찍기(기준 이미지는 그대로)
 digital-twin/harness/shot.sh "site=shipyard&fixture=weld-basic&t=3200&preset=cell-1"
 ```
 
@@ -130,8 +143,11 @@ digital-twin/harness/shot.sh "site=shipyard&fixture=weld-basic&t=3200&preset=cel
 
 - 기준 이미지 이름: `golden/{site}-{fixture}-{t}-{preset}-{quality}.png`
 - 장면 목록은 `e2e/shots.json` 한 곳에 둔다. 사이트마다 전경 1장, 셀 클로즈업 1장, 상태별 1장씩으로 시작한다.
-- 허용 오차: 다른 픽셀 0.5% 이하. GPU마다 결과가 조금 다르므로, 기준 이미지는 개발용 맥 한 대에서 만들고 그 환경에서만 비교한다.
-- 기준 이미지는 사람이 승인해야 갱신한다(`check.sh --update-golden`). 통과시키려고 갱신하지 않는다.
+- 허용 오차: 픽셀별 색 차이 0.02(Playwright `threshold`) 넘는 픽셀이 0.5% 이하. 같은 맥에서는 화면이 바이트 단위로 같다(M1에서 3회 확인). GPU마다 결과가 조금 다르므로, 기준 이미지는 개발용 맥 한 대에서 만들고 그 환경에서만 비교한다.
+- 기준 이미지는 사람이 승인해야 갱신한다. 순서: `check.sh --candidates` → `out/review/`를 사람이 본다 → 승인하면 `check.sh --update-golden`. 통과시키려고 갱신하지 않는다.
+- 장면에 `select`를 주면 그 객체를 실제로 눌러 선택한 뒤 찍는다(선택 외곽선 확인).
+- 기준 이미지가 없으면 실패한다(`updateSnapshots: 'none'`). Playwright 기본값은 찍은 화면을 승인 없이 기준으로 저장하므로 막아 두었다.
+- 찍은 화면과 차이 이미지는 `out/test-results/L4/`에 남는다. 단계마다 결과 폴더가 따로라 L5가 L4 결과를 지우지 않는다.
 - 픽셀 비교가 통과했다는 것은 "전과 같다"는 뜻이지 "보기 좋다"는 뜻이 아니다. 품질 작업을 했으면 `out/`의 스크린샷을 직접 열어 본다.
 
 ## 작업 루프

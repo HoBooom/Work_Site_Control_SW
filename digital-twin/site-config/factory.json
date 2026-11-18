@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "site": "factory",
+  "name": "제조공장 용접 부스",
+  "background": {
+    "glb": "/sites/factory.glb"
+  },
+  "environment": {
+    "hdri": null,
+    "exposure": 1
+  },
+  "cells": [
+    {
+      "id": "weld-booth-1",
+      "name": "용접 부스 1",
+      "pose": {
+        "position_m": [0, 0, 0],
+        "yaw_deg": 90
+      },
+      "plate": {
+        "size_mm": [1000, 500],
+        "pose": {
+          "position_m": [0.45, -0.25, 0.8],
+          "yaw_deg": 0
+        }
+      },
+      "robot": {
+        "urdf": "/robots/standin-6axis/robot.urdf",
+        "pose": {
+          "position_m": [0, 0, 0.3],
+          "yaw_deg": 0
+        }
+      },
+      "camera": {
+        "stream": "/stream/weld-booth-1"
+      }
+    }
+  ],
+  "presets": [
+    {
+      "id": "overview",
+      "name": "전경",
+      "eye_m": [8.5, -7, 6],
+      "target_m": [0.6, 1.2, 0.6]
+    },
+    {
+      "id": "weld-booth-1",
+      "name": "용접 부스 1 클로즈업",
+      "eye_m": [3.2, -2.4, 2.8],
+      "target_m": [-0.3, 0.8, 1.1]
+    }
+  ]
+}

@@ -1,63 +1,59 @@
-import { useLayoutEffect } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
+import { Selection } from '@react-three/postprocessing';
+import { useMemo } from 'react';
+import { Mesh } from 'three';
 import type { SiteConfig } from '../contracts/messages.gen';
-import { SITE_TO_SCENE_ROTATION_X, deg, siteToScene } from './frame';
-
-const GROUND_SIZE_M = 60;
+import { CameraControls } from './CameraControls';
+import { Cell } from './Cell';
+import { Effects } from './Effects';
+import { SITE_TO_SCENE_ROTATION_X } from './frame';
+import { Lighting } from './Lighting';
+import { QUALITY, type QualityTier } from './quality';
+import { useSelection } from './selection';
 
 interface Props {
   config: SiteConfig;
   /** 카메라 프리셋 id */
   preset: string;
+  /** 품질 등급(RD-05) */
+  tier: QualityTier;
 }
 
-/** 씬의 입구. site-config와 store만 읽는다(spec 3절). */
-export function TwinScene({ config, preset }: Props) {
+/** 씬의 입구. site-config와 store만 읽는다(spec 3절). 로딩은 Suspense, 실패는 바깥 ErrorBoundary가 받는다. */
+export function TwinScene({ config, preset, tier }: Props) {
+  const quality = QUALITY[tier];
   return (
-    <>
-      <color attach="background" args={['#d9dde2']} />
-      <hemisphereLight args={['#ffffff', '#8a8f96', 1.2]} />
-      <directionalLight position={[8, 12, 6]} intensity={2} />
-      <CameraRig config={config} preset={preset} />
-      <gridHelper args={[GROUND_SIZE_M, GROUND_SIZE_M, '#9aa1aa', '#b9bec5']} position={[0, 0.001, 0]} />
+    <Selection>
+      <Lighting config={config} quality={quality} />
+      <CameraControls config={config} preset={preset} />
+      {config.background.glb && <Background site={config.site} url={config.background.glb} />}
       <group name={`site:${config.site}`} rotation-x={SITE_TO_SCENE_ROTATION_X}>
-        <mesh name="ground" receiveShadow>
-          <planeGeometry args={[GROUND_SIZE_M, GROUND_SIZE_M]} />
-          <meshStandardMaterial color="#c4c8cd" roughness={0.95} />
-        </mesh>
         {config.cells.map((c) => (
-          <group
-            key={c.id}
-            name={`cell:${config.site}/${c.id}`}
-            position={c.pose.position_m}
-            rotation-z={deg(c.pose.yaw_deg)}
-          >
-            <CellMarker />
-          </group>
+          <Cell key={c.id} site={config.site} cell={c} />
         ))}
       </group>
-    </>
+      <Effects quality={quality} tier={tier} />
+    </Selection>
   );
 }
 
-/** M0 자리표시: 셀 원점의 바닥 표시. M1에서 작업판·로봇으로 바뀐다. */
-function CellMarker() {
+/** 정적 층. GLB는 파이프라인이 Y-up으로 내보내므로 씬 루트에 그대로 놓는다. 누르면 선택 해제 */
+function Background({ site, url }: { site: string; url: string }) {
+  const gltf = useGLTF(url, false);
+  const select = useSelection((s) => s.select);
+  // 배경은 그림자를 받고 드리운다(RD-03). useGLTF가 캐시한 원본을 바꾸므로 한 번만 해도 된다
+  useMemo(() => {
+    gltf.scene.traverse((o) => {
+      if (o instanceof Mesh) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+      }
+    });
+  }, [gltf]);
+  // GLTFLoader는 노드 이름의 ':'를 지우므로 이름은 여기서 붙인다
   return (
-    <mesh position={[0, 0, 0.01]}>
-      <boxGeometry args={[2.4, 2.4, 0.02]} />
-      <meshStandardMaterial color="#e2a63b" roughness={0.6} />
-    </mesh>
+    <group name={`background:${site}`}>
+      <primitive object={gltf.scene} onClick={() => select(null)} />
+    </group>
   );
-}
-
-function CameraRig({ config, preset }: Props) {
-  const camera = useThree((s) => s.camera);
-  useLayoutEffect(() => {
-    const p = config.presets.find((x) => x.id === preset);
-    if (!p) return;
-    camera.position.set(...siteToScene(p.eye_m));
-    camera.lookAt(...siteToScene(p.target_m));
-    camera.updateProjectionMatrix();
-  }, [camera, config, preset]);
-  return null;
 }

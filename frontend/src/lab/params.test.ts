@@ -8,7 +8,7 @@ describe('parseLabParams', () => {
       fixture: 'idle',
       t: 0,
       preset: null,
-      quality: 'high',
+      quality: null,
       freeze: false,
       hud: true,
     });

@@ -25,6 +25,16 @@ export default tseslint.config(
     },
   },
   {
+    // 씬은 site-config와 store만 읽는다(spec 3절). 랩·MQTT를 알면 나중에 bus로 바꿀 때 씬이 바뀐다.
+    files: ['src/scene/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['../lab/*', '../../lab/*', '../bus/mqtt*', 'mqtt'], message: '씬은 랩·MQTT를 import하지 않는다' }] },
+      ],
+    },
+  },
+  {
     files: ['src/**/*.test.ts'],
     rules: { 'no-restricted-syntax': 'off' },
   },

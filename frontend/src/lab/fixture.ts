@@ -31,7 +31,8 @@ export function parseFixture(text: string, name = 'fixture'): FixtureLine[] {
 }
 
 export interface FixtureSink {
-  apply: (topic: string, payload: unknown) => unknown;
+  /** at = 줄의 t(시나리오 ms). 랩의 가상 시계와 같은 기준이다 */
+  apply: (topic: string, payload: unknown, at: number) => unknown;
   reset: () => void;
 }
 
@@ -64,7 +65,7 @@ export class FixturePlayer {
     }
     while (this.cursor < this.lines.length && this.lines[this.cursor].t <= t) {
       const l = this.lines[this.cursor++];
-      this.sink.apply(l.topic, l.payload);
+      this.sink.apply(l.topic, l.payload, l.t);
     }
     this.time = t;
   }

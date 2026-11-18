@@ -1,0 +1,114 @@
+{
+  "v": 1,
+  "note": "공용 재질 라이브러리(AS-04). USD 형상은 token innoworks:material로 이름만 참조하고 자체 색(displayColor)을 갖지 않는다. 색은 linear RGB(0~1), glTF baseColorFactor로 그대로 들어간다. M3에서 텍스처·노멀맵을 더한다.",
+  "materials": {
+    "concrete_floor": {
+      "base_color": [
+        0.24,
+        0.24,
+        0.23
+      ],
+      "metallic": 0.0,
+      "roughness": 0.92
+    },
+    "painted_steel_gray": {
+      "base_color": [
+        0.3,
+        0.32,
+        0.34
+      ],
+      "metallic": 0.2,
+      "roughness": 0.55
+    },
+    "painted_steel_dark": {
+      "base_color": [
+        0.12,
+        0.13,
+        0.14
+      ],
+      "metallic": 0.2,
+      "roughness": 0.6
+    },
+    "bare_steel": {
+      "base_color": [
+        0.56,
+        0.57,
+        0.58
+      ],
+      "metallic": 1.0,
+      "roughness": 0.4
+    },
+    "galvanized_steel": {
+      "base_color": [
+        0.62,
+        0.64,
+        0.66
+      ],
+      "metallic": 0.9,
+      "roughness": 0.5
+    },
+    "safety_yellow": {
+      "base_color": [
+        0.8,
+        0.55,
+        0.02
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6
+    },
+    "safety_black": {
+      "base_color": [
+        0.02,
+        0.02,
+        0.02
+      ],
+      "metallic": 0.0,
+      "roughness": 0.7
+    },
+    "rubber_black": {
+      "base_color": [
+        0.03,
+        0.03,
+        0.03
+      ],
+      "metallic": 0.0,
+      "roughness": 0.9
+    },
+    "machine_blue": {
+      "base_color": [
+        0.05,
+        0.16,
+        0.4
+      ],
+      "metallic": 0.1,
+      "roughness": 0.5
+    },
+    "primer_red": {
+      "base_color": [
+        0.3,
+        0.07,
+        0.04
+      ],
+      "metallic": 0.0,
+      "roughness": 0.75
+    },
+    "crane_yellow": {
+      "base_color": [
+        0.82,
+        0.55,
+        0.02
+      ],
+      "metallic": 0.1,
+      "roughness": 0.5
+    },
+    "cylinder_green": {
+      "base_color": [
+        0.04,
+        0.2,
+        0.1
+      ],
+      "metallic": 0.1,
+      "roughness": 0.45
+    }
+  }
+}

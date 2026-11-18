@@ -1,8 +1,9 @@
 // L3 씬 상태: 픽스처를 특정 시각에 멈추고 window.__twin으로 상태를 확인한다.
 import { expect, test } from '@playwright/test';
+import { fixture, lastPayload, tsAt } from './data';
 import { openLab } from './helpers';
 
-const HOME = { joint_1: 0, joint_2: -30, joint_3: 30, joint_4: 0, joint_5: 45, joint_6: 0 };
+const idle = fixture('idle');
 
 test.describe('트윈 랩 @L3', () => {
   test('idle 픽스처를 멈춘 시각의 상태가 픽스처와 같다', async ({ page }) => {
@@ -11,10 +12,11 @@ test.describe('트윈 랩 @L3', () => {
     expect(s).toMatchObject({ site: 'shipyard', fixture: 'idle', t: 1000, frozen: true });
     expect(Object.keys(s.cells).sort()).toEqual(['shipyard/weld-cell-1', 'shipyard/weld-cell-2']);
     for (const c of Object.values(s.cells)) {
+      const robot = lastPayload(idle, `innoworks/${c.site}/${c.cell}/robot/state`, 1000);
       expect(c.online).toBe(true);
       expect(c.task?.state).toBe('idle');
-      expect(c.joints).toEqual(HOME);
-      expect(c.jointsTs).toBe(1_767_225_600_000 + 1000);
+      expect(c.joints).toEqual(robot?.joints);
+      expect(c.jointsTs).toBe(tsAt(1000));
     }
     lab.expectClean();
   });
@@ -38,7 +40,7 @@ test.describe('트윈 랩 @L3', () => {
       return { s300, s2000: window.__twin!.state() };
     });
     expect(back.s300.t).toBe(300);
-    expect(back.s300.cells['shipyard/weld-cell-1'].jointsTs).toBe(1_767_225_600_000 + 300);
+    expect(back.s300.cells['shipyard/weld-cell-1'].jointsTs).toBe(tsAt(300));
     expect(back.s2000).toEqual(at2000);
     lab.expectClean();
   });
@@ -56,8 +58,9 @@ test.describe('트윈 랩 @L3', () => {
     const lab = await openLab(page, 'fixture=idle&freeze=1');
     const st = await page.evaluate(() => window.__twin!.stats());
     expect(st.frames).toBeGreaterThanOrEqual(3);
-    expect(st.calls).toBeGreaterThan(0);
-    expect(st.triangles).toBeGreaterThan(0);
+    // 후처리 패스까지 한 프레임 합계를 센다. 마지막 패스만 세면 1이 나온다(M3에서 찾은 버그)
+    expect(st.calls, '드로우 콜은 배경 재질 수 + 셀 객체보다 많다').toBeGreaterThan(20);
+    expect(st.triangles, '삼각형은 배경 GLB(276)보다 많다').toBeGreaterThan(276);
     lab.expectClean();
   });
 

@@ -40,9 +40,12 @@ export interface Shot {
   t: number;
   preset: string;
   quality: 'high' | 'low';
+  /** 찍기 전에 눌러 선택할 객체 */
+  select?: { cell: string; part: 'robot' };
 }
 
-export const shotName = (s: Shot) => `${s.site}-${s.fixture}-${s.t}-${s.preset}-${s.quality}`;
+export const shotName = (s: Shot) =>
+  `${s.site}-${s.fixture}-${s.t}-${s.preset}-${s.quality}${s.select ? `-sel-${s.select.cell}-${s.select.part}` : ''}`;
 
 export const shotQuery = (s: Shot) =>
   new URLSearchParams({

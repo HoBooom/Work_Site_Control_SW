@@ -18,6 +18,8 @@ export interface CellState {
   joints: Record<string, number> | null;
   /** 마지막 robot/state의 ts(epoch ms) */
   jointsTs: number | null;
+  /** 최근 robot/state 샘플(오래된 것부터). 씬이 보간에 쓴다(DY-01). at = 수신 시각 */
+  jointSamples: JointSample[];
   task: TaskState | null;
   proposal: TaskProposal | null;
   snap: TaskSnap | null;
@@ -25,6 +27,16 @@ export interface CellState {
   /** 활성 알람만. alarm_id → 알람 */
   alarms: Record<string, Alarm>;
 }
+
+export interface JointSample {
+  /** 수신 시각(ms). 시간 기준은 apply를 부르는 쪽이 정한다: 랩은 가상 시계, 앱은 performance.now() */
+  at: number;
+  ts: number;
+  joints: Record<string, number>;
+}
+
+/** 보간에 쓰는 샘플 수. 20Hz에서 400ms 분량 */
+export const JOINT_SAMPLES_KEPT = 8;
 
 export const cellKey = (site: string, cell: string) => `${site}/${cell}`;
 
@@ -35,6 +47,7 @@ function emptyCell(site: string, cell: string): CellState {
     online: null,
     joints: null,
     jointsTs: null,
+    jointSamples: [],
     task: null,
     proposal: null,
     snap: null,
@@ -48,11 +61,18 @@ export function reduceCell<S extends keyof CellTopicPayloads>(
   prev: CellState,
   suffix: S,
   payload: CellTopicPayloads[S],
+  at: number,
 ): CellState {
   switch (suffix) {
     case 'robot/state': {
       const p = payload as CellTopicPayloads['robot/state'];
-      return { ...prev, joints: p.joints, jointsTs: p.ts };
+      const sample = { at, ts: p.ts, joints: p.joints };
+      return {
+        ...prev,
+        joints: p.joints,
+        jointsTs: p.ts,
+        jointSamples: [...prev.jointSamples, sample].slice(-JOINT_SAMPLES_KEPT),
+      };
     }
     case 'task/state': {
       const p = payload as CellTopicPayloads['task/state'];
@@ -84,21 +104,24 @@ export function reduceCell<S extends keyof CellTopicPayloads>(
 
 export interface TwinStore {
   cells: Record<string, CellState>;
-  /** 토픽 메시지 반영. 셀 토픽이 아니면 false. payload 검증은 들어오는 쪽(bus, L0 픽스처 검사)이 맡는다. */
-  apply: (topic: string, payload: unknown) => boolean;
+  /**
+   * 토픽 메시지 반영. 셀 토픽이 아니면 false. payload 검증은 들어오는 쪽(bus, L0 픽스처 검사)이 맡는다.
+   * at: 수신 시각(ms). 씬의 시간 기준(TwinTimeContext)과 같은 시계여야 한다.
+   */
+  apply: (topic: string, payload: unknown, at: number) => boolean;
   reset: () => void;
 }
 
 export const useTwinStore = create<TwinStore>((set) => ({
   cells: {},
-  apply: (topic, payload) => {
+  apply: (topic, payload, at) => {
     const t = parseCellTopic(topic);
     if (!t) return false;
     const key = cellKey(t.site, t.cell);
     set((s) => ({
       cells: {
         ...s.cells,
-        [key]: reduceCell(s.cells[key] ?? emptyCell(t.site, t.cell), t.suffix, payload as never),
+        [key]: reduceCell(s.cells[key] ?? emptyCell(t.site, t.cell), t.suffix, payload as never, at),
       },
     }));
     return true;

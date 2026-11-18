@@ -1,0 +1,181 @@
+#usda 1.0
+(
+    defaultPrim = "Shipyard"
+    metersPerUnit = 1
+    upAxis = "Z"
+    doc = """조선소 블록 용접 구역(임시 에셋, M1).
+규칙(digital-twin/docs/README.md): prim 경로 = 토픽 = 설정 키. /Shipyard/WeldCell1 = shipyard/weld-cell-1.
+셀의 Robot, Plate는 기준점만 둔다. 웹이 그린다(PL-04)."""
+)
+
+def Xform "Shipyard" (
+    kind = "assembly"
+    customData = {
+        string "innoworks:role" = "site"
+    }
+)
+{
+    string innoworks:name = "조선소 블록 용접 구역"
+
+    def Xform "Env"
+    {
+        def Cube "Floor"
+        {
+            double size = 1
+            token innoworks:material = "concrete_floor"
+            double3 xformOp:translate = (2, 2, -0.05)
+            float3 xformOp:scale = (80, 80, 0.1)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def "Platen" (
+            references = @../assets/props/platen.usda@
+        )
+        {
+            double3 xformOp:translate = (9, 2.5, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "HullBlock" (
+            references = @../assets/props/hull_block.usda@
+        )
+        {
+            double3 xformOp:translate = (9, 2.5, 0.25)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Crane" (
+            references = @../assets/props/crane_runway.usda@
+        )
+        {
+        }
+    }
+
+    def Xform "WeldCell1" (
+        customData = {
+            string "innoworks:role" = "cell"
+        }
+    )
+    {
+        string innoworks:name = "용접 셀 1"
+        double3 xformOp:translate = (0, 0, 0)
+        float xformOp:rotateZ = 0
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+
+        def Xform "Robot" (
+            customData = {
+                string "innoworks:role" = "robot"
+            }
+        )
+        {
+            string innoworks:urdf = "/robots/standin-6axis/robot.urdf"
+            double3 xformOp:translate = (0, 0, 0.3)
+            float xformOp:rotateZ = 0
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+        }
+
+        def Xform "Plate" (
+            customData = {
+                string "innoworks:role" = "plate"
+            }
+        )
+        {
+            float2 innoworks:sizeMm = (1000, 500)
+            double3 xformOp:translate = (0.45, -0.25, 0.8)
+            float xformOp:rotateZ = 0
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+        }
+
+        def "Pedestal" (
+            references = @../assets/props/robot_pedestal.usda@
+        )
+        {
+        }
+
+        def "Table" (
+            references = @../assets/props/weld_table.usda@
+        )
+        {
+            double3 xformOp:translate = (0.95, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Marking" (
+            references = @../assets/props/cell_marking.usda@
+        )
+        {
+            double3 xformOp:translate = (0.6, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Kit" (
+            references = @../assets/props/weld_cell_kit.usda@
+        )
+        {
+        }
+    }
+
+    def Xform "WeldCell2" (
+        customData = {
+            string "innoworks:role" = "cell"
+        }
+    )
+    {
+        string innoworks:name = "용접 셀 2"
+        double3 xformOp:translate = (0, 4, 0)
+        float xformOp:rotateZ = 0
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+
+        def Xform "Robot" (
+            customData = {
+                string "innoworks:role" = "robot"
+            }
+        )
+        {
+            string innoworks:urdf = "/robots/standin-6axis/robot.urdf"
+            double3 xformOp:translate = (0, 0, 0.3)
+            float xformOp:rotateZ = 0
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+        }
+
+        def Xform "Plate" (
+            customData = {
+                string "innoworks:role" = "plate"
+            }
+        )
+        {
+            float2 innoworks:sizeMm = (1000, 500)
+            double3 xformOp:translate = (0.45, -0.25, 0.8)
+            float xformOp:rotateZ = 0
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+        }
+
+        def "Pedestal" (
+            references = @../assets/props/robot_pedestal.usda@
+        )
+        {
+        }
+
+        def "Table" (
+            references = @../assets/props/weld_table.usda@
+        )
+        {
+            double3 xformOp:translate = (0.95, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Marking" (
+            references = @../assets/props/cell_marking.usda@
+        )
+        {
+            double3 xformOp:translate = (0.6, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Kit" (
+            references = @../assets/props/weld_cell_kit.usda@
+        )
+        {
+        }
+    }
+}
