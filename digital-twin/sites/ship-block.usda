@@ -3,7 +3,7 @@
     defaultPrim = "ShipBlock"
     metersPerUnit = 1
     upAxis = "Z"
-    doc = """조선소 이중저 블록 내부(ADR 0003). 4족 자석발 이동 용접 로봇 2대가 블록 안을 걷고 벽에 붙어 용접한다.
+    doc = """조선소 건조 도크 안 이중저 블록(ADR 0003). 도크 벽·안벽, 앞에 탑재된 선체, 뒤에 대기 블록, 골리앗 크레인. 4족 자석발 이동 용접 로봇 2대가 블록 안을 걷고 벽에 붙어 용접한다.
 규칙: prim 경로 = 토픽 = 설정 키. /ShipBlock/Spider1 = ship-block/spider-1(작업 단위 = 로봇 1대).
 이동 로봇 셀은 Plate가 없다. 셀 자세는 대기 위치이고, 움직이는 동안의 자세는 robot/state.base가 준다.
 용접선이 놓이는 면(surfaces)은 블록 에셋 안의 기준점에서 site-config로 생성된다."""
@@ -20,13 +20,10 @@ def Xform "ShipBlock" (
 
     def Xform "Env"
     {
-        def Cube "Floor"
+        def "Dock" (
+            references = @../assets/props/dry_dock.usda@
+        )
         {
-            double size = 1
-            token innoworks:material = "concrete_floor"
-            double3 xformOp:translate = (0, 0, -0.05)
-            float3 xformOp:scale = (80, 80, 0.1)
-            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         }
 
         def "Block" (
@@ -35,18 +32,48 @@ def Xform "ShipBlock" (
         {
         }
 
-        def "Yard" (
-            references = @../assets/props/block_yard_kit.usda@
+        def "Hull" (
+            doc = "이미 탑재된 선체(작업 블록 앞, +X). 열린 끝이 작업 블록을 본다"
+            references = @../assets/props/hull_section.usda@
+        )
+        {
+            double3 xformOp:translate = (7, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "ParkedBlock" (
+            doc = "탑재를 기다리는 다음 블록(뒤, -X). 같은 에셋을 다시 쓰고 용접 면 기준점은 끈다"
+            references = @../assets/props/double_bottom_block.usda@
+        )
+        {
+            double3 xformOp:translate = (-17, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+
+            over "Surfaces" (
+                active = false
+            )
+            {
+            }
+        }
+
+        def "Goliath" (
+            references = @../assets/props/goliath_crane.usda@
+        )
+        {
+            double3 xformOp:translate = (14, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Quay" (
+            references = @../assets/props/quay_structures.usda@
         )
         {
         }
 
-        def "Crane" (
-            references = @../assets/props/crane_runway.usda@
+        def "Yard" (
+            references = @../assets/props/block_yard_kit.usda@
         )
         {
-            double3 xformOp:translate = (-6, 0, 0)
-            uniform token[] xformOpOrder = ["xformOp:translate"]
         }
     }
 

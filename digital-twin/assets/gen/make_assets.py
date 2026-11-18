@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -285,10 +286,38 @@ def double_bottom_block() -> Model:
     return m
 
 
+def _barrier(m: Model, x: float, y: float, along_x: bool = True) -> None:
+    """노랑·검정 이동식 안전 펜스 한 칸(2m)"""
+    w = (2.0, 0.05) if along_x else (0.05, 2.0)
+    for k in range(4):
+        m.add("safety_yellow" if k % 2 == 0 else "safety_black", box((w[0], w[1], 0.22), 0, (x, y, 0.25 + 0.22 * k)))
+    for d in (-0.95, 0.95):
+        px, py = (x + d, y) if along_x else (x, y + d)
+        m.add("safety_black", box((0.5 if not along_x else 0.08, 0.08 if not along_x else 0.5, 0.06), 0, (px, py, 0.03)))
+
+
+def _spool(m: Model, x: float, y: float, z: float, r: float = 0.15, h: float = 0.1) -> None:
+    m.add("galvanized_steel", move(cylinder(r, h, 0.005, 20), (x, y, z)))
+    m.add("primer_red", move(cylinder(r * 0.85, h * 0.8, 0, 20), (x, y, z + h * 0.1)))
+
+
+def _fan(m: Model, x: float, y: float, duct) -> None:
+    """이동식 송풍기(축류 팬, 노란 틀) + 노란 주름 덕트"""
+    m.add("crane_yellow", box((0.7, 0.6, 0.06), 0.01, (x, y, 0.03)))
+    m.add("machine_blue", move(rot(cylinder(0.26, 0.5, 0.02, 24, center=True), "x", 90), (x, y, 0.36)))
+    m.add("painted_steel_dark", move(rot(cylinder(0.27, 0.04, 0, 24, center=True), "x", 90), (x, y - 0.27, 0.36)))
+    m.add("safety_yellow", tube(mk.catmull_rom(duct, 8), 0.14, 14))
+
+
 def block_yard_kit() -> Model:
-    """블록 밖 장비(사이트 전용, 원점 사이트 원점): 용접 전원·가스통(이동 로봇 송급용), 공구함, 접근 사다리."""
+    """블록 주변 작업 환경(사이트 전용, 원점 사이트 원점). 블록 바로 옆 도크 바닥의 장비.
+    -Y(열린 쪽): HITL 운영자 책상, 로봇 투입 카트, 송풍기·덕트, 조명탑, 케이블 릴, 안전 펜스.
+    +Y(측면 외판 뒤): 가스 용기 랙, 분전반, 송풍기(덕트가 외판을 넘어 들어간다).
+    -X(뒤): 용접 전원·가스통, 강판·형강 적치, 소모품 팔레트, 공구 컨테이너. +X(선체 쪽): 이동식 비계 타워, 고소 작업대.
+    높은 것도 6m 이하. 키 라이트 그림자 범위(블록 ±7m) 안에서 그림자가 온전하다."""
     m = Model()
-    for i, y in enumerate((-1.6, 1.2)):
+    # 용접 전원·가스통(이동 로봇 송급용)과 케이블
+    for y in (-1.6, 1.2):
         welder(m, -6.0, y)
         gas_cylinder(m, -6.45, y + 0.05)
         m.add("rubber_black", tube(mk.catmull_rom([[-5.8, y - 0.05, 0.8], [-5.55, y - 0.15, 0.4], [-5.2, y * 0.6, 0.015], [-4.9, y * 0.3, 0.015]], 10), 0.014, 12))
@@ -300,8 +329,294 @@ def block_yard_kit() -> Model:
         m.add("safety_yellow", tube([[lx + dx, ly - 0.45, 0.0], [lx + dx, ly + 0.25, 1.85]], 0.018, 10))
     for k in range(1, 7):
         z = k * 0.27
-        y = ly - 0.45 + 0.7 * z / 1.85
-        m.add("galvanized_steel", tube([[lx - 0.22, y, z], [lx + 0.22, y, z]], 0.012, 8))
+        yy = ly - 0.45 + 0.7 * z / 1.85
+        m.add("galvanized_steel", tube([[lx - 0.22, yy, z], [lx + 0.22, yy, z]], 0.012, 8))
+
+    # --- -Y: HITL 운영자 책상(노트북, 모니터) ---
+    dx_, dy_ = -1.6, -6.3
+    m.add("painted_steel_gray", box((1.6, 0.8, 0.04), 0.008, (dx_, dy_, 0.74)))
+    for sx in (-0.72, 0.72):
+        for sy in (-0.32, 0.32):
+            m.add("painted_steel_dark", box((0.04, 0.04, 0.72), 0, (dx_ + sx, dy_ + sy, 0.36)))
+    m.add("painted_steel_dark", box((0.36, 0.25, 0.02), 0.004, (dx_ - 0.3, dy_ - 0.1, 0.77)))
+    m.add("safety_black", move(rot(box((0.36, 0.01, 0.24), 0.003), "x", -15), (dx_ - 0.3, dy_ + 0.04, 0.9)))
+    m.add("painted_steel_dark", box((0.06, 0.06, 0.25), 0, (dx_ + 0.35, dy_ + 0.2, 0.89)))
+    m.add("safety_black", box((0.6, 0.03, 0.36), 0.005, (dx_ + 0.35, dy_ + 0.18, 1.18)))
+    # 로봇 투입 카트(탯줄 드럼, 운반 케이스)
+    cx, cy = 1.9, -6.2
+    m.add("machine_blue", box((1.2, 0.7, 0.5), 0.02, (cx, cy, 0.45)))
+    for sx in (-0.5, 0.5):
+        for sy in (-0.28, 0.28):
+            m.add("rubber_black", move(rot(cylinder(0.09, 0.05, 0.01, 16, center=True), "x", 90), (cx + sx, cy + sy, 0.09)))
+    m.add("galvanized_steel", move(rot(cylinder(0.32, 0.5, 0.01, 28, center=True), "x", 90), (cx - 0.15, cy, 1.02)))
+    m.add("rubber_black", move(rot(cylinder(0.27, 0.46, 0, 28, center=True), "x", 90), (cx - 0.15, cy, 1.02)))
+    m.add("painted_steel_dark", box((0.55, 0.4, 0.28), 0.03, (cx + 0.75, cy - 0.9, 0.14)))
+    m.add("rubber_black", tube(mk.catmull_rom([[cx - 0.15, cy + 0.28, 0.75], [cx - 0.3, cy + 0.9, 0.05], [cx - 0.6, -4.2, 0.015], [cx - 1.0, -3.4, 0.015]], 10), 0.02, 10))
+    # 케이블 릴
+    m.add("primer_red", move(rot(lathe([(0.0, -0.22), (0.42, -0.22), (0.42, -0.18), (0.22, -0.18), (0.22, 0.18), (0.42, 0.18), (0.42, 0.22), (0.0, 0.22)], 28), "x", 90), (0.2, -5.4, 0.42)))
+    m.add("rubber_black", move(rot(cylinder(0.33, 0.34, 0, 28, center=True), "x", 90), (0.2, -5.4, 0.42)))
+    # 송풍기 1: 덕트가 열린 쪽으로 빈 칸(-Y 칸)에 들어간다
+    _fan(m, 3.6, -5.3, [[3.6, -5.05, 0.36], [3.5, -4.3, 0.3], [3.3, -3.4, 0.5], [3.1, -2.4, 0.45], [2.9, -1.4, 0.4]])
+    # 조명탑(트레일러 + 마스트 + 등 4개)
+    tx, ty = -8.8, -7.6
+    m.add("crane_yellow", box((2.0, 1.2, 0.9), 0.04, (tx, ty, 0.75)))
+    for sx in (-0.6, 0.6):
+        m.add("rubber_black", move(rot(cylinder(0.25, 0.15, 0.02, 20, center=True), "x", 90), (tx + sx, ty - 0.65, 0.25)))
+    m.add("galvanized_steel", tube([[tx, ty, 1.2], [tx, ty, 5.2]], 0.07, 12))
+    m.add("galvanized_steel", box((1.4, 0.1, 0.1), 0, (tx, ty, 5.25)))
+    for sx in (-0.55, -0.18, 0.18, 0.55):
+        m.add("painted_steel_dark", move(rot(box((0.3, 0.12, 0.24), 0.02), "x", 30), (tx + sx, ty + 0.08, 5.45)))
+    # 안전 펜스(작업 구역 경계, 가운데 출입구)
+    for x in (-6.0, -4.0, -2.0, 2.0, 4.0, 6.0):
+        _barrier(m, x, -9.4)
+    for y in (-8.4, -6.4):
+        _barrier(m, -7.0, y, along_x=False)
+        _barrier(m, 7.0, y, along_x=False)
+    for x in (-0.6, 0.6):
+        m.add("safety_yellow", move(lathe([(0, 0), (0.17, 0), (0.17, 0.03), (0.13, 0.03), (0.03, 0.7), (0, 0.7)], 20), (x, -9.6, 0)))
+
+    # --- +Y: 가스 용기 랙, 분전반, 송풍기 2 ---
+    gx, gy = -2.6, 5.0
+    m.add("galvanized_steel", box((2.0, 0.6, 0.05), 0, (gx, gy, 0.025)))
+    for sx in (-0.98, 0.98):
+        for sy in (-0.28, 0.28):
+            m.add("galvanized_steel", box((0.05, 0.05, 1.5), 0, (gx + sx, gy + sy, 0.75)))
+    for z in (0.6, 1.2):
+        m.add("galvanized_steel", box((2.0, 0.04, 0.04), 0, (gx, gy - 0.3, z)))
+        m.add("galvanized_steel", box((2.0, 0.04, 0.04), 0, (gx, gy + 0.3, z)))
+    for i, x in enumerate(np.linspace(gx - 0.75, gx + 0.75, 5)):
+        if i == 2:
+            m.add("primer_red", move(cylinder(0.11, 1.3, 0.03, 20), (x, gy, 0.05)))
+        else:
+            gas_cylinder(m, x, gy)
+    px, py = 1.4, 4.9
+    m.add("painted_steel_gray", box((0.8, 0.35, 1.0), 0.02, (px, py, 1.0)))
+    for sx in (-0.3, 0.3):
+        m.add("painted_steel_dark", box((0.05, 0.3, 0.5), 0, (px + sx, py, 0.25)))
+    m.add("primer_red", box((0.08, 0.02, 0.08), 0, (px + 0.25, py - 0.18, 1.3)))
+    m.add("rubber_black", tube(mk.catmull_rom([[px - 0.2, py - 0.1, 0.5], [px - 0.4, py - 0.5, 0.015], [-1.0, 4.3, 0.015], [-4.5, 4.3, 0.015], [-5.6, 2.0, 0.015]], 10), 0.022, 10))
+    _fan(m, 4.3, 5.4, [[4.3, 5.15, 0.36], [4.3, 4.4, 0.8], [4.3, 3.7, 2.05], [4.3, 3.0, 2.15], [4.3, 2.4, 1.2], [4.3, 2.2, 0.6]])
+
+    # --- -X: 강판·형강 적치, 소모품 팔레트, 공구 컨테이너 ---
+    sx_, sy_ = -9.0, 2.5
+    for dx in (-1.1, 0.0, 1.1):
+        m.add("timber", box((0.12, 1.6, 0.12), 0, (sx_ + dx, sy_, 0.06)))
+    for k in range(8):
+        m.add("bare_steel", box((3.0, 1.5, 0.016), 0, (sx_, sy_, 0.128 + k * 0.018)))
+    bx, by = -9.0, -2.6
+    for dx in (-1.6, 0.0, 1.6):
+        m.add("timber", box((0.12, 0.8, 0.1), 0, (bx + dx, by, 0.05)))
+    for k in range(3):
+        for j in range(4):
+            m.add("primer_red", box((4.0, 0.012, 0.18), 0, (bx, by - 0.24 + j * 0.16, 0.19 + k * 0.19)))
+            m.add("primer_red", box((4.0, 0.04, 0.02), 0, (bx, by - 0.24 + j * 0.16 + 0.014, 0.27 + k * 0.19)))
+    for i, (ox, oy) in enumerate(((-7.3, -4.8), (-8.6, -4.8))):
+        m.add("timber", box((1.2, 1.0, 0.14), 0, (ox, oy, 0.07)))
+        if i == 0:
+            for a in (-0.3, 0.3):
+                for b in (-0.25, 0.25):
+                    _spool(m, ox + a, oy + b, 0.14, 0.16, 0.12)
+                    _spool(m, ox + a, oy + b, 0.26, 0.16, 0.12)
+        else:
+            m.add("painted_steel_dark", box((1.1, 0.9, 0.5), 0.01, (ox, oy, 0.39)))
+    cx2, cy2 = -10.0, 9.4
+    m.add("machine_blue", box((6.06, 2.44, 2.59), 0.03, (cx2, cy2, 1.295)))
+    for x in np.arange(cx2 - 2.9, cx2 + 2.95, 0.3):
+        m.add("machine_blue", box((0.08, 2.48, 2.3), 0, (x, cy2, 1.3)))
+    m.add("painted_steel_dark", box((0.04, 2.3, 2.4), 0, (cx2 + 3.04, cy2, 1.3)))
+
+    # --- +X(선체 쪽): 이동식 비계 타워, 고소 작업대 ---
+    vx, vy = 6.0, -4.0
+    for sx in (-0.65, 0.65):
+        for sy in (-1.2, 1.2):
+            m.add("galvanized_steel", tube([[vx + sx, vy + sy, 0.15], [vx + sx, vy + sy, 5.4]], 0.025, 8))
+            m.add("rubber_black", move(cylinder(0.07, 0.12, 0.01, 12), (vx + sx, vy + sy, 0.0)))
+    for z in (1.8, 3.6, 5.2):
+        m.add("timber", box((1.3, 2.4, 0.05), 0, (vx, vy, z)))
+        for sy in (-1.2, 1.2):
+            m.add("galvanized_steel", tube([[vx - 0.65, vy + sy, z + 0.5], [vx + 0.65, vy + sy, z + 0.5]], 0.02, 8))
+        for sx in (-0.65, 0.65):
+            m.add("galvanized_steel", tube([[vx + sx, vy - 1.2, z + 0.5], [vx + sx, vy + 1.2, z + 0.5]], 0.02, 8))
+    lx2, ly2 = 5.9, 4.7
+    m.add("crane_yellow", box((2.0, 1.0, 0.45), 0.03, (lx2, ly2, 0.33)))
+    for sx in (-0.8, 0.8):
+        for sy in (-0.4, 0.4):
+            m.add("rubber_black", move(rot(cylinder(0.12, 0.1, 0.01, 16, center=True), "x", 90), (lx2 + sx, ly2 + sy, 0.12)))
+    for k in range(3):
+        z0, z1 = 0.55 + k * 0.85, 0.55 + (k + 1) * 0.85
+        for sy in (-0.42, 0.42):
+            m.add("painted_steel_dark", tube([[lx2 - 0.85, ly2 + sy, z0], [lx2 + 0.85, ly2 + sy, z1]], 0.035, 8))
+            m.add("painted_steel_dark", tube([[lx2 + 0.85, ly2 + sy, z0], [lx2 - 0.85, ly2 + sy, z1]], 0.035, 8))
+    zt = 0.55 + 3 * 0.85
+    m.add("crane_yellow", box((2.2, 1.1, 0.12), 0.02, (lx2, ly2, zt + 0.06)))
+    for sx in (-1.05, 1.05):
+        for sy in (-0.5, 0.5):
+            m.add("crane_yellow", box((0.04, 0.04, 1.1), 0, (lx2 + sx, ly2 + sy, zt + 0.6)))
+    m.add("crane_yellow", box((2.2, 0.04, 0.04), 0, (lx2, ly2 - 0.5, zt + 1.15)))
+    m.add("crane_yellow", box((2.2, 0.04, 0.04), 0, (lx2, ly2 + 0.5, zt + 1.15)))
+    return m
+
+
+# ---------- 건조 도크(ADR 0003, ship-block 주변) ----------
+# 키 라이트 그림자는 셀·면 주변(블록 ±7m)에서만 계산된다. 높은 구조물은 그림자가 떨어지는 +X·+Y 쪽(카메라가 보는 쪽)에 두고,
+# -X·-Y 쪽에는 낮은 것만 둔다(그림자 끝이 잘린 조각으로 보이지 않게, docs/README.md "사이트 추가하기").
+
+DOCK_X = (-34.0, 110.0)  # 도크 바닥 길이(X). +X 쪽은 안개 속으로 이어진다
+DOCK_Y = (-24.0, 22.0)  # 도크 벽 위치(Y)
+QUAY_Z = 12.0  # 안벽(부두) 높이
+
+
+def plate_strip(m: Model, mat: str, pts, x0: float, x1: float, t: float) -> None:
+    """YZ 평면의 꺾은선(pts)을 X 방향(x0~x1)으로 늘린 두께 t의 판. 선체 외판·내판 단면에 쓴다."""
+    for (y0, z0), (y1, z1) in zip(pts[:-1], pts[1:]):
+        L = math.hypot(y1 - y0, z1 - z0)
+        b = rot(rounded_box((x1 - x0, L + t, t), 0), "x", math.degrees(math.atan2(z1 - z0, y1 - y0)))
+        m.add(mat, move(b, ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)))
+
+
+def dry_dock() -> Model:
+    """건조 도크(사이트 전용, 원점 사이트 원점): 도크 바닥, 계단식 도크 벽, 안벽, 반목(킬 블록) 줄, 계선주, 난간, 사다리."""
+    m = Model()
+    x0, x1 = DOCK_X
+    ys, yn = DOCK_Y
+    xc, lx = (x0 + x1) / 2, x1 - x0
+    m.add("concrete_floor", box((lx, yn - ys, 0.4), 0, (xc, (ys + yn) / 2, -0.2)))
+    # 배수로(바닥 양쪽)
+    for y in (ys + 1.2, yn - 1.2):
+        m.add("painted_steel_dark", box((lx, 0.6, 0.02), 0, (xc, y, 0.005)))
+    # 도크 벽: 3단 계단(알타), 위가 안벽
+    steps = [(0.0, 4.0, 2.0), (4.0, 8.0, 1.5), (8.0, QUAY_Z, 1.2)]  # (아래 z, 위 z, 계단 폭)
+    for side, y_wall in ((1, yn), (-1, ys)):
+        off = 0.0
+        for z_lo, z_hi, w in steps:
+            yc = y_wall + side * (off + w / 2)
+            m.add("concrete_floor", box((lx, w, z_hi), 0.02, (xc, yc, z_hi / 2)))
+            off += w
+        # 안벽 윗면(멀리까지)
+        m.add("concrete_light", box((lx + 80, 70.0, 0.6), 0, (xc, y_wall + side * (off + 35.0), QUAY_Z - 0.3)))
+        # 안벽 가장자리 난간·계선주
+        ye = y_wall + side * (off + 0.4)
+        for x in np.arange(x0 + 2, min(x1, 60.0), 2.5):
+            m.add("safety_yellow", box((0.06, 0.06, 1.1), 0, (x, ye, QUAY_Z + 0.55)))
+        for z in (QUAY_Z + 0.55, QUAY_Z + 1.05):
+            m.add("safety_yellow", box((min(x1, 60.0) - x0 - 2, 0.05, 0.05), 0, ((x0 + 2 + min(x1, 60.0)) / 2, ye, z)))
+        for x in np.arange(x0 + 8, min(x1, 60.0), 16.0):
+            m.add("painted_steel_dark", move(cylinder(0.25, 0.7, 0.04, 20), (x, ye + side * 1.4, QUAY_Z)))
+        # 벽 사다리
+        for x in (-20.0, 4.0, 28.0):
+            yl = y_wall + side * 0.15
+            for dx in (-0.25, 0.25):
+                m.add("safety_yellow", box((0.05, 0.05, 4.0), 0, (x + dx, yl, 2.0)))
+            for z in np.arange(0.3, 4.0, 0.3):
+                m.add("galvanized_steel", box((0.5, 0.03, 0.03), 0, (x, yl, z)))
+    # 도크 머리 벽(-X 끝)
+    m.add("concrete_floor", box((4.0, yn - ys + 9.4, QUAY_Z), 0.02, (x0 - 2.0, (ys + yn) / 2, QUAY_Z / 2)))
+    m.add("concrete_light", box((60.0, yn - ys + 150, 0.6), 0, (x0 - 34.0, (ys + yn) / 2, QUAY_Z - 0.3)))
+    # 반목(킬 블록): 중심선과 좌우 줄. 블록·선체가 그 위에 놓인다
+    for y in (-6.0, 0.0, 6.0):
+        for x in np.arange(-30.0, 60.0, 1.6):
+            if -5.2 < x < 5.2:
+                continue  # 작업 블록 자리(블록 자체 받침이 있다)
+            m.add("concrete_light", box((0.8, 1.2, 0.22), 0, (x, y, 0.11)))
+            m.add("timber", box((0.8, 1.2, 0.08), 0, (x, y, 0.26)))
+    return m
+
+
+HULL_HALF_B = 14.0  # 선체 반폭
+HULL_DECK_Z = 16.0
+HULL_LEN = 40.0
+
+
+def _hull_profile(half: float = HULL_HALF_B, flat: float = 10.0, bilge_r: float = 4.0, z0: float = 0.31) -> list:
+    """선체 단면(외판, YZ): 좌현 갑판 → 빌지 → 평저 → 빌지 → 우현 갑판"""
+    arc = [(flat + bilge_r * math.cos(a), z0 + bilge_r + bilge_r * math.sin(a)) for a in np.linspace(-math.pi / 2, 0, 7)]
+    right = arc + [(half, HULL_DECK_Z)]
+    left = [(-y, z) for y, z in reversed(right)]
+    return left + right[1:]
+
+
+def hull_section() -> Model:
+    """도크에 이미 탑재된 선체 일부(원점: 선체 뒤 끝 단면 중심 바닥, +X로 HULL_LEN). 열린 단면으로 이중저·빌지·측면 탱크·갑판이 보인다.
+    사이트에서 작업 블록(+X 끝 4.8) 앞(+X)에 둔다."""
+    m = Model()
+    L = HULL_LEN
+    plate_strip(m, "painted_steel_gray", _hull_profile(), 0.0, L, 0.022)
+    inner = [(-11.6, HULL_DECK_Z), (-11.6, 4.0), (-10.0, 1.82), (10.0, 1.82), (11.6, 4.0), (11.6, HULL_DECK_Z)]
+    plate_strip(m, "painted_steel_gray", inner, 0.0, L, 0.016)
+    # 측면 탱크 스트링거(수평 판)와 갑판
+    for z in (6.0, 10.0, 14.0):
+        for s in (-1, 1):
+            plate_strip(m, "primer_red", [(s * 11.6, z), (s * 14.0, z)], 0.0, L, 0.014)
+    for s in (-1, 1):
+        plate_strip(m, "painted_steel_gray", [(s * 11.6, HULL_DECK_Z), (s * 14.0, HULL_DECK_Z)], 0.0, L, 0.018)
+    m.add("painted_steel_gray", box((L - 16.0, 23.2, 0.018), 0, (16.0 + (L - 16.0) / 2, 0, HULL_DECK_Z)))  # 앞쪽은 갑판까지 덮였다
+    m.add("painted_steel_gray", box((L - 16.0, 0.4, 1.4), 0.02, (16.0 + (L - 16.0) / 2, -11.6, HULL_DECK_Z + 0.7)))  # 해치 코밍
+    # 열린 끝과 다음 칸의 늑판·웹 프레임(맨홀)
+    for x in (0.3, 3.5):
+        for y0, y1 in ((-10.0, -3.2), (-3.2, 3.2), (3.2, 10.0)):
+            w, yc = y1 - y0 - 0.014, (y0 + y1) / 2
+            m.add("primer_red", move(rot(mk.plate_with_hole(w, 1.5, 0.014, (0.0, 0.78), (min(0.3, w / 4), 0.42)), "z", 90), (x, yc, 0.32)))
+        for s in (-1, 1):
+            for z0, z1 in ((4.0, 6.0), (6.0, 10.0), (10.0, 14.0), (14.0, HULL_DECK_Z)):
+                m.add("primer_red", move(rot(mk.plate_with_hole(2.4 - 0.02, z1 - z0, 0.014, (0.0, (z1 - z0) / 2), (0.5, min(0.7, (z1 - z0) / 2 - 0.3))), "z", 90), (x, s * 12.8, z0)))
+    # 이중저 거더(종방향)
+    for y in (-6.4, -3.2, 0.0, 3.2, 6.4):
+        m.add("primer_red", box((L, 0.014, 1.5), 0.002, (L / 2, y, 1.07)))
+    # 좌현(-Y, 카메라 쪽) 비계: 기둥·띠장·발판
+    ys = -HULL_HALF_B - 0.9
+    for x in np.arange(1.0, L, 2.0):
+        for dy in (0.0, -1.0):
+            m.add("galvanized_steel", tube([[x, ys + dy, 0.0], [x, ys + dy, HULL_DECK_Z + 1.0]], 0.024, 8))
+    for z in np.arange(2.0, HULL_DECK_Z + 0.1, 2.0):
+        for dy in (0.0, -1.0):
+            m.add("galvanized_steel", tube([[1.0, ys + dy, z + 0.9], [L - 1.0, ys + dy, z + 0.9]], 0.02, 8))
+        m.add("timber", box((L - 2.0, 1.0, 0.05), 0, (L / 2, ys - 0.5, z)))
+        m.add("safety_yellow", box((L - 2.0, 0.03, 0.15), 0, (L / 2, ys - 1.0, z + 0.1)))
+    return m
+
+
+def goliath_crane() -> Model:
+    """골리앗 크레인(도크를 가로지른다). 원점: 크레인 중심 바닥(z=0). 다리는 양쪽 안벽(z=QUAY_Z) 위 레일에."""
+    m = Model()
+    yl = 28.0  # 다리 위치(±Y)
+    zt = 40.0  # 거더 아래
+    for s in (-1, 1):
+        y = s * yl
+        for dx in (-7.0, 7.0):
+            m.add("crane_yellow", tube([[dx, y, QUAY_Z], [dx * 0.25, y, zt]], 0.6, 16))
+        m.add("crane_yellow", box((16.0, 1.6, 1.4), 0.05, (0, y, QUAY_Z + 0.7)))  # 주행대차
+        m.add("painted_steel_dark", box((60.0, 0.2, 0.2), 0, (0, y - 1.0, QUAY_Z + 0.1)))  # 레일
+        m.add("painted_steel_dark", box((60.0, 0.2, 0.2), 0, (0, y + 1.0, QUAY_Z + 0.1)))
+    for dx in (-1.6, 1.6):
+        m.add("crane_yellow", box((1.4, 2 * yl + 6.0, 3.6), 0.06, (dx, 0, zt + 1.8)))
+    m.add("painted_steel_gray", box((5.0, 6.0, 3.0), 0.08, (0, 6.0, zt + 5.1)))  # 트롤리
+    for dx in (-0.3, 0.3):
+        m.add("safety_black", tube([[dx, 6.0, zt + 3.6], [dx, 6.0, 24.0]], 0.05, 8))
+    m.add("crane_yellow", box((1.6, 1.2, 1.6), 0.1, (0, 6.0, 23.2)))  # 훅 블록
+    m.add("painted_steel_gray", box((3.0, 3.0, 2.6), 0.06, (0, -yl + 3.0, zt + 1.3)))  # 운전실
+    return m
+
+
+def quay_structures() -> Model:
+    """+Y 안벽 위 구조물(사이트 전용): 지브 크레인, 공장 건물. 안개 속 실루엣."""
+    m = Model()
+    z = QUAY_Z
+    # 지브(러핑) 크레인: 문형 받침 + 타워 + 비스듬한 지브
+    cx, cy = -6.0, 30.0
+    for dx in (-2.5, 2.5):
+        for dy in (-2.5, 2.5):
+            m.add("crane_yellow", box((0.6, 0.6, 6.0), 0.03, (cx + dx, cy + dy, z + 3.0)))
+    m.add("crane_yellow", box((6.0, 6.0, 1.0), 0.05, (cx, cy, z + 6.5)))
+    m.add("crane_yellow", box((2.2, 2.2, 14.0), 0.05, (cx, cy, z + 14.0)))
+    m.add("painted_steel_gray", box((4.0, 3.0, 3.0), 0.08, (cx + 0.5, cy, z + 22.5)))
+    m.add("crane_yellow", tube([[cx + 1.5, cy, z + 22.0], [cx + 20.0, cy - 9.0, z + 34.0]], 0.45, 12))
+    m.add("safety_black", tube([[cx + 20.0, cy - 9.0, z + 34.0], [cx + 20.0, cy - 9.0, z + 16.0]], 0.05, 8))
+    # 공장 건물(조립 공장)
+    bx, by, L, W, H = -10.0, 52.0, 70.0, 24.0, 20.0
+    m.add("galvanized_steel", box((L, W, H), 0.05, (bx, by, z + H / 2)))
+    m.add("painted_steel_gray", box((L + 1.0, W + 1.0, 1.2), 0.05, (bx, by, z + H + 0.6)))
+    for x in np.arange(bx - L / 2 + 6, bx + L / 2 - 4, 12.0):
+        m.add("painted_steel_dark", box((8.0, 0.2, 10.0), 0.02, (x, by - W / 2 - 0.1, z + 5.0)))  # 대형 문
     return m
 
 
@@ -409,6 +724,10 @@ ASSETS = {
     "factory_hall": (factory_hall, "FactoryHall"),
     "double_bottom_block": (double_bottom_block, "DoubleBottomBlock"),
     "block_yard_kit": (block_yard_kit, "BlockYardKit"),
+    "dry_dock": (dry_dock, "DryDock"),
+    "hull_section": (hull_section, "HullSection"),
+    "goliath_crane": (goliath_crane, "GoliathCrane"),
+    "quay_structures": (quay_structures, "QuayStructures"),
 }
 
 
