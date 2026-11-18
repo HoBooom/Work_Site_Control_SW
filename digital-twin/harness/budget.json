@@ -19,18 +19,6 @@
   },
   "scenes": [
     {
-      "site": "shipyard",
-      "fixture": "weld-basic",
-      "preset": "overview",
-      "quality": "high"
-    },
-    {
-      "site": "shipyard",
-      "fixture": "weld-basic",
-      "preset": "overview",
-      "quality": "low"
-    },
-    {
       "site": "factory",
       "fixture": "factory-weld-basic",
       "preset": "overview",

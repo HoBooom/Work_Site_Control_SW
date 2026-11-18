@@ -1,4 +1,4 @@
-"""에셋 생성기(M3-b 조선소, M4 공장). 절차적 형상(meshkit)으로 USD 에셋을 만든다. 손으로 고치지 말고 이 파일을 고친다.
+"""에셋 생성기(M4 공장, ADR 0003 조선소 건조 도크 블록). 절차적 형상(meshkit)으로 USD 에셋을 만든다. 손으로 고치지 말고 이 파일을 고친다.
 
     uv run --project digital-twin/pipeline python digital-twin/assets/gen/make_assets.py           생성
     uv run --project digital-twin/pipeline python digital-twin/assets/gen/make_assets.py --check   파일이 생성기와 다르면 실패(L1)
@@ -111,26 +111,6 @@ def gas_cylinder(m: Model, gx: float, gy: float) -> None:
     m.add("bare_steel", move(cylinder(0.035, 0.08, 0.008, 16), (gx, gy, 1.27)))
 
 
-def weld_cell_kit() -> Model:
-    """셀 주변 장비. 원점: 셀 원점. 용접기, 가스통, 케이블, 안전 펜스(+X, +Y 두 변. 작업자 쪽은 열어 둔다)."""
-    m = Model()
-    # 용접기·가스통은 셀 뒤쪽(-X,+Y) 모서리. 작업자 쪽 카메라와 로봇 사이를 가리지 않는다
-    wx, wy = -0.75, 1.05
-    welder(m, wx, wy)
-    gas_cylinder(m, -1.08, 1.05)
-    # 케이블: 송급기 → 바닥 → 로봇 베이스
-    path = mk.catmull_rom([[wx + 0.2, wy - 0.05, 0.8], [wx + 0.42, wy - 0.15, 0.45], [-0.35, 0.75, 0.015], [-0.15, 0.35, 0.015], [0, 0.2, 0.08]], 10)
-    m.add("rubber_black", tube(path, 0.014, 12))
-    # 안전 펜스
-    xs = [-1.2, 0.27, 1.73, 2.6]
-    for a, b in zip(xs[:-1], xs[1:]):
-        fence_panel(m, (a, 1.65), (b, 1.65))
-    ys = [1.65, 0.6, -0.45, -1.5]
-    for a, b in zip(ys[:-1], ys[1:]):
-        fence_panel(m, (2.6, a), (2.6, b))
-    return m
-
-
 def weld_booth_kit() -> Model:
     """공장 용접 부스(AS-07). 원점: 셀 원점. 세 변 펜스(작업자 쪽 -Y는 열고 라이트 커튼), 테이블 위 흄 후드와 덕트,
     부스 밖 집진기·로봇 제어반, 부스 안 용접기·가스통."""
@@ -175,62 +155,6 @@ def weld_booth_kit() -> Model:
     gas_cylinder(m, -0.98, 1.32)
     path = mk.catmull_rom([[wx + 0.2, wy - 0.05, 0.8], [wx + 0.4, wy - 0.2, 0.45], [-0.2, 0.7, 0.015], [-0.05, 0.35, 0.015], [0, 0.2, 0.08]], 10)
     m.add("rubber_black", tube(path, 0.014, 12))
-    return m
-
-
-# ---------- 조선소 배경 ----------
-
-def platen() -> Model:
-    """정반. 원점: 중심 바닥. 윗면 0.25m. T홈 줄."""
-    m = Model()
-    m.add("painted_steel_dark", box((8, 6, 0.25), 0.02, (0, 0, 0.125)))
-    for y in np.arange(-2.75, 2.76, 0.5):
-        m.add("safety_black", box((7.9, 0.04, 0.004), 0, (0, y, 0.252)))
-    return m
-
-
-def hull_block() -> Model:
-    """선체 이중저 블록(조립 중). 원점: 중심 바닥(정반 위에 놓는다)."""
-    m = Model()
-    L, B = 5.6, 3.6
-    m.add("primer_red", box((L, B, 0.03), 0.005, (0, 0, 0.015)))
-    for y in np.arange(-1.5, 1.51, 0.6):  # 종방향 T형 보강재
-        m.add("primer_red", box((L - 0.2, 0.015, 0.25), 0.003, (0, y, 0.155)))
-        m.add("primer_red", box((L - 0.2, 0.12, 0.015), 0.003, (0, y, 0.2875)))
-    for x in np.arange(-2.1, 2.11, 1.4):  # 늑판
-        m.add("primer_red", box((0.015, B - 0.2, 0.7), 0.003, (x, 0, 0.38)))
-        m.add("primer_red", box((0.12, B - 0.2, 0.015), 0.003, (x, 0, 0.7375)))
-    for y in (-B / 2, B / 2):  # 측거더
-        m.add("primer_red", box((L, 0.02, 0.9), 0.004, (0, y, 0.48)))
-    m.add("primer_red", box((2.6, B, 0.02), 0.004, (-1.5, 0, 0.94)))  # 내저판 일부
-    return m
-
-
-def crane_runway() -> Model:
-    """천장 크레인 주행로와 갠트리. 원점: 사이트 원점(사이트 전용).
-    주행로는 Y 방향으로 x=-8, x=18에 둔다. 키 라이트(-X,-Y 위에서)의 그림자가 +X,+Y로 떨어지므로 셀(x -1.2~2.6)에 닿지 않는다."""
-    m = Model()
-    xs = (-8.0, 18.0)
-    y0, y1 = -6.0, 12.0
-    for x in xs:
-        for y in np.arange(y0, y1 + 0.1, 6.0):
-            m.add("painted_steel_gray", box((0.4, 0.4, 8.6), 0.012, (x, y, 4.3)))
-        cy, ly = (y0 + y1) / 2, y1 - y0 + 1
-        m.add("crane_yellow", box((0.4, ly, 0.03), 0.004, (x, cy, 8.615)))
-        m.add("crane_yellow", box((0.02, ly, 0.6), 0.003, (x, cy, 8.9)))
-        m.add("crane_yellow", box((0.4, ly, 0.03), 0.004, (x, cy, 9.185)))
-    span = xs[1] - xs[0]
-    cx = (xs[0] + xs[1]) / 2
-    by = 9.0  # 갠트리는 셀 뒤쪽에 세워 둔다
-    for dy in (-0.4, 0.4):
-        m.add("crane_yellow", box((span + 0.4, 0.5, 1.0), 0.03, (cx, by + dy, 9.8)))
-    for x in xs:
-        m.add("crane_yellow", box((0.7, 2.4, 0.6), 0.03, (x, by, 9.5)))
-    tx = 9.0
-    m.add("painted_steel_dark", box((1.2, 1.6, 0.6), 0.03, (tx, by, 10.6)))
-    for dx in (-0.12, 0.12):
-        m.add("safety_black", tube([[tx + dx, by, 10.3], [tx + dx, by, 5.6]], 0.015, 8))
-    m.add("crane_yellow", box((0.45, 0.3, 0.5), 0.03, (tx, by, 5.35)))
     return m
 
 
@@ -716,10 +640,6 @@ def factory_hall() -> Model:
 ASSETS = {
     "weld_table": (weld_table, "WeldTable"),
     "robot_pedestal": (robot_pedestal, "RobotPedestal"),
-    "weld_cell_kit": (weld_cell_kit, "WeldCellKit"),
-    "platen": (platen, "Platen"),
-    "hull_block": (hull_block, "HullBlock"),
-    "crane_runway": (crane_runway, "CraneRunway"),
     "weld_booth_kit": (weld_booth_kit, "WeldBoothKit"),
     "factory_hall": (factory_hall, "FactoryHall"),
     "double_bottom_block": (double_bottom_block, "DoubleBottomBlock"),

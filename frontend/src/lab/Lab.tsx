@@ -13,7 +13,7 @@ import { useTwinStore } from '../store/twin-store';
 import { VirtualClock } from './clock';
 import { bindDebugApi, bindLabControls, bindThree, installDebugApi, markFailed, markMounted, onFrame } from './debug-api';
 import { FixturePlayer, type FixtureLine } from './fixture';
-import { loadFixture } from './fixture-files';
+import { listFixtures, loadFixture } from './fixture-files';
 import { parseLabParams, type LabParams, type QualityTier } from './params';
 import { StatsCollector } from './stats';
 
@@ -25,6 +25,8 @@ const READY_AFTER_FRAMES = 3;
 interface Loaded {
   params: LabParams;
   site: string;
+  /** 쓰는 픽스처 이름(인자가 없으면 `{site}-idle`) */
+  fixture: string;
   config: SiteConfig;
   lines: FixtureLine[];
 }
@@ -39,9 +41,11 @@ async function load(search: string): Promise<Loaded> {
   const params = parseLabParams(search);
   const site = params.site ?? listSites()[0];
   if (!site) throw new Error('site-config가 하나도 없다');
-  const [config, lines] = await Promise.all([loadSiteConfig(site), loadFixture(params.fixture)]);
+  const fixture = params.fixture ?? (listFixtures().includes(`${site}-idle`) ? `${site}-idle` : listFixtures()[0]);
+  if (!fixture) throw new Error('픽스처가 하나도 없다');
+  const [config, lines] = await Promise.all([loadSiteConfig(site), loadFixture(fixture)]);
   checkPreset(config, params.preset ?? config.presets[0].id);
-  return { params, site, config, lines };
+  return { params, site, fixture, config, lines };
 }
 
 function fail(e: unknown) {
@@ -105,8 +109,8 @@ function LabView({ loaded }: { loaded: Loaded }) {
   }, [params, lines]);
 
   useEffect(() => {
-    bindDebugApi({ site: view.site, fixture: params.fixture, ...rig });
-  }, [rig, view.site, params.fixture]);
+    bindDebugApi({ site: view.site, fixture: loaded.fixture, ...rig });
+  }, [rig, view.site, loaded.fixture]);
 
   const setPreset = useCallback((preset: string) => {
     setView((v) => {
@@ -126,7 +130,7 @@ function LabView({ loaded }: { loaded: Loaded }) {
 
   const now = useMemo(() => () => rig.clock.t, [rig]);
   const quality = QUALITY[view.quality];
-  const label = `${view.site} · ${params.fixture} · ${view.preset} · ${view.quality}`;
+  const label = `${view.site} · ${loaded.fixture} · ${view.preset} · ${view.quality}`;
   return (
     <div style={styles.root}>
       <SceneErrorBoundary onError={fail}>

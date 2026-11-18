@@ -27,7 +27,7 @@ _KEBAB = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
 def pascal_to_kebab(name: str) -> str:
-    """WeldCell1 → weld-cell-1, Shipyard → shipyard"""
+    """Spider1 → spider-1, ShipBlock → ship-block"""
     s = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "-", name)
     s = re.sub(r"(?<=[A-Za-z])(?=[0-9])", "-", s)
     s = re.sub(r"(?<=[0-9])(?=[A-Za-z])", "-", s)
@@ -35,7 +35,7 @@ def pascal_to_kebab(name: str) -> str:
 
 
 def kebab_to_pascal(name: str) -> str:
-    """weld-cell-1 → WeldCell1"""
+    """spider-1 → Spider1"""
     return "".join(part[:1].upper() + part[1:] for part in name.split("-"))
 
 

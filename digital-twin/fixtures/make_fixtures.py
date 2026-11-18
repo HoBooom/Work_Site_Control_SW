@@ -24,11 +24,10 @@ def msg(t, site, cell, suffix, **payload):
     return {"t": t, "topic": f"{PREFIX}/{site}/{cell}/{suffix}", "payload": {"v": 1, "ts": T0 + t, **payload}}
 
 
-SHIPYARD = ("shipyard", ("weld-cell-1", "weld-cell-2"))
 FACTORY = ("factory", ("weld-booth-1",))
 
 
-def idle(site=SHIPYARD[0], cells=SHIPYARD[1]):
+def idle(site, cells):
     """모든 셀이 홈 자세로 정지, 작업 없음. 3초, robot/state 10Hz."""
     out = []
     for c in cells:
@@ -58,7 +57,7 @@ SEAM_T = "t-0001"
 SEAM_PATH = [[round(100 + 100 * i, 1), round(250 + 30 * math.sin(math.pi * i / 8), 1)] for i in range(9)]
 
 
-def weld_basic(site=SHIPYARD[0], cells=SHIPYARD[1]):
+def weld_basic(site, cells):
     """첫 셀: 제안(0.5s) → 실행(2s~8s, 진행률 0.5s마다) → 완료(8s). 나머지 셀은 대기. 10초.
 
     실행 전에는 홈에서 시작 자세로 옮겨 가고, 완료 뒤에는 홈으로 돌아간다.
@@ -106,91 +105,6 @@ def _online_idle(out, site, cells):
     for c in cells:
         out.append(msg(0, site, c, "status", state="online"))
         out.append(msg(0, site, c, "task/state", state="idle", task_id=None))
-
-
-SNAP_PATH = [[round(100 + 100 * i, 1), round(240 + 20 * math.sin(math.pi * i / 8), 1)] for i in range(9)]
-
-
-def weld_edit():
-    """셀 1: 제안(0.5s) → 수정 시작(1.5s) → 수렴 결과(2.5s) → 수렴 경로로 다시 제안(3.5s). 6초. DY-04 수정 중, DY-07."""
-    out = []
-    site, c1, c2 = "shipyard", "weld-cell-1", "weld-cell-2"
-    _online_idle(out, site, (c1, c2))
-    out.append(msg(500, site, c1, "task/state", state="proposed", task_id=SEAM_T))
-    out.append(msg(500, site, c1, "task/proposal", task_id=SEAM_T, path=SEAM_PATH, confidence=0.62))
-    out.append(msg(1500, site, c1, "task/state", state="editing", task_id=SEAM_T))
-    out.append(msg(2500, site, c1, "task/snap", task_id=SEAM_T, ok=True, path=SNAP_PATH))
-    out.append(msg(3500, site, c1, "task/state", state="proposed", task_id=SEAM_T))
-    out.append(msg(3500, site, c1, "task/proposal", task_id=SEAM_T, path=SNAP_PATH, confidence=0.95))
-    for c in (c1, c2):
-        _robot_stream(out, site, c, 0, 6000, lambda t: dict(HOME))
-    return out
-
-
-def alarm():
-    """셀 1: 실행(1s~) 중 경고 알람(3s) → 치명 알람과 긴급정지(3.5s) → 치명 해제(5s) → 경고 해제(5.5s). 7초. DY-04 정지, DY-05."""
-    out = []
-    site, c1, c2 = "shipyard", "weld-cell-1", "weld-cell-2"
-    _online_idle(out, site, (c1, c2))
-    out.append(msg(200, site, c1, "task/state", state="proposed", task_id=SEAM_T))
-    out.append(msg(200, site, c1, "task/proposal", task_id=SEAM_T, path=SEAM_PATH, confidence=0.9))
-    out.append(msg(1000, site, c1, "task/state", state="running", task_id=SEAM_T))
-    for t in range(1000, 3501, 500):
-        out.append(msg(t, site, c1, "task/progress", task_id=SEAM_T, progress=round((t - 1000) / 6000, 4)))
-    out.append(msg(3000, site, c1, "alarm", alarm_id="a-1", severity="warning", code="SCENE_CHANGED", message="작업판 주변 장면 변화 감지", active=True))
-    out.append(msg(3500, site, c1, "alarm", alarm_id="a-2", severity="critical", code="ESTOP", message="긴급정지", active=True))
-    out.append(msg(3500, site, c1, "task/state", state="estopped", task_id=SEAM_T))
-    out.append(msg(5000, site, c1, "alarm", alarm_id="a-2", severity="critical", code="ESTOP", message="긴급정지", active=False))
-    out.append(msg(5500, site, c1, "alarm", alarm_id="a-1", severity="warning", code="SCENE_CHANGED", message="작업판 주변 장면 변화 감지", active=False))
-
-    def pose(t):
-        return weld_pose(min(max((t - 1000) / 6000, 0), (3500 - 1000) / 6000))
-
-    _robot_stream(out, site, c1, 0, 7000, pose)
-    _robot_stream(out, site, c2, 0, 7000, lambda t: dict(HOME))
-    return out
-
-
-def offline():
-    """셀 1 실행 중 서버 offline(4s, LWT) → 다시 online(6s, retained 상태 재발행). 8초. DY-08."""
-    out = []
-    site, c1, c2 = "shipyard", "weld-cell-1", "weld-cell-2"
-    _online_idle(out, site, (c1, c2))
-    out.append(msg(200, site, c1, "task/state", state="proposed", task_id=SEAM_T))
-    out.append(msg(200, site, c1, "task/proposal", task_id=SEAM_T, path=SEAM_PATH, confidence=0.9))
-    out.append(msg(1000, site, c1, "task/state", state="running", task_id=SEAM_T))
-    out.append(msg(3500, site, c1, "task/progress", task_id=SEAM_T, progress=0.4))
-    out.append(msg(4000, site, c1, "status", state="offline"))
-    # 다시 붙으면 retained 메시지가 다시 온다
-    out.append(msg(6000, site, c1, "status", state="online"))
-    out.append(msg(6000, site, c1, "task/state", state="paused", task_id=SEAM_T))
-    out.append(msg(6000, site, c1, "task/proposal", task_id=SEAM_T, path=SEAM_PATH, confidence=0.9))
-    out.append(msg(6000, site, c1, "task/progress", task_id=SEAM_T, progress=0.4))
-
-    def pose(t):
-        return weld_pose(min(max((t - 1000) / 6000, 0), 0.4))
-
-    _robot_stream(out, site, c1, 0, 3900, pose)  # offline 동안 robot/state 없음
-    _robot_stream(out, site, c1, 6000, 8000, pose)
-    _robot_stream(out, site, c2, 0, 8000, lambda t: dict(HOME))
-    return out
-
-
-def stale():
-    """셀 1 robot/state가 3초~6초 끊겼다가 재개. 서버는 online. 8초. DY-09."""
-    out = []
-    site, c1, c2 = "shipyard", "weld-cell-1", "weld-cell-2"
-    _online_idle(out, site, (c1, c2))
-
-    def pose(t):
-        return weld_pose((t % 4000) / 4000)
-
-    _robot_stream(out, site, c1, 0, 3000, pose)
-    _robot_stream(out, site, c1, 6000, 8000, pose)
-    _robot_stream(out, site, c2, 0, 8000, lambda t: dict(HOME))
-    return out
-
-
 
 
 # ---------- 조선소 블록 내부: 4족 이동 용접 로봇(ADR 0003) ----------
@@ -384,21 +298,13 @@ def ship_block_weld():
         out.append(msg(t, site, c1, "task/progress", task_id="t-0101", progress=round((t - WELD[0]) / (WELD[1] - WELD[0]), 4)))
     out.append(msg(WELD[1], site, c1, "task/state", state="completed", task_id="t-0101"))
 
-    shell_z = surf["bottom-shell"]["pose"]["position_m"][2]
-    work_base = _floor_pose(sp, surf["bottom-shell"], S1_WORK_X, S1_Y)
-
     def tip_target(k):
-        """진행률 k의 노즐 끝 목표(몸통 좌표)"""
-        x = SEAM1_X[0] + (SEAM1_X[1] - SEAM1_X[0]) * k
-        return (x - S1_WORK_X, SEAM1_Y_SITE - S1_Y, shell_z + STANDOFF_M - work_base["position_m"][2])
+        return _seam1_tip(sp, surf, k)
 
     seam_start = sp.arm_ik(tip_target(0.0))
     seam_end = sp.arm_ik(tip_target(1.0))
-
-    def blend(a, b, k):
-        return {j: round(a[j] + (b[j] - a[j]) * _smooth(k), 3) + 0.0 for j in a}
-
-    zero_arm = {f"arm_{i}": 0.0 for i in range(1, 7)}
+    blend = _blend
+    zero_arm = dict(ZERO_ARM)
     for t in range(0, 12001, ROBOT_HZ_MS):
         j = dict(SPIDER_ZERO)
         contacts = dict(ALL_ON)
@@ -425,19 +331,157 @@ def ship_block_weld():
     return out
 
 
+ZERO_ARM = {f"arm_{i}": 0.0 for i in range(1, 7)}
+
+
+def _blend(a, b, k):
+    return {j: round(a[j] + (b[j] - a[j]) * _smooth(k), 3) + 0.0 for j in a}
+
+
+def _seam1_tip(sp, surf, k):
+    """스파이더 1(작업 위치)이 용접선 1을 진행률 k만큼 갔을 때 노즐 끝 목표(몸통 좌표)"""
+    shell_z = surf["bottom-shell"]["pose"]["position_m"][2]
+    base_z = _floor_pose(sp, surf["bottom-shell"], S1_WORK_X, S1_Y)["position_m"][2]
+    x = SEAM1_X[0] + (SEAM1_X[1] - SEAM1_X[0]) * k
+    return (x - S1_WORK_X, SEAM1_Y_SITE - S1_Y, shell_z + STANDOFF_M - base_z)
+
+
+class Block:
+    """블록 픽스처 공통: 스파이더 1은 작업 위치(바닥 외판), 스파이더 2는 측면 외판. 시간표는 옛 조선소 셀 픽스처와 같다."""
+
+    SITE, C1, C2 = "ship-block", "spider-1", "spider-2"
+
+    def __init__(self):
+        self.sp = Spider()
+        _, self.surf = _block()
+        self.b1 = _floor_pose(self.sp, self.surf["bottom-shell"], S1_WORK_X, S1_Y)
+        self.b2 = _wall_pose(self.sp, self.surf["side-shell"], S2_X, S2_Z)
+        self.seam = _seam1(self.surf["bottom-shell"])
+        o = self.surf["bottom-shell"]["pose"]["position_m"]
+        # 수렴 결과: 사용자가 그린 경로를 용접선 토(론지 웹 쪽)로 4mm 붙이고 끝을 살짝 늘렸다
+        self.snap = [[round(x, 1), round(y - 4.0 - 3.0 * math.sin(math.pi * i / 8), 1)] for i, (x, y) in enumerate(self.seam)]
+
+    def arm(self, k):
+        return self.sp.arm_ik(_seam1_tip(self.sp, self.surf, min(max(k, 0.0), 1.0)))
+
+    def s1(self, out, t, arm=None):
+        out.append(msg(t, self.SITE, self.C1, "robot/state", joints=dict(SPIDER_ZERO) | (arm or ZERO_ARM), base=self.b1, contacts=dict(ALL_ON)))
+
+    def s2(self, out, t):
+        out.append(msg(t, self.SITE, self.C2, "robot/state", joints=dict(SPIDER_ZERO), base=self.b2, contacts=dict(ALL_ON)))
+
+    def start(self):
+        out = []
+        _online_idle(out, self.SITE, (self.C1, self.C2))
+        return out
+
+    def propose(self, out, t, path, confidence, state="proposed"):
+        out.append(msg(t, self.SITE, self.C1, "task/state", state=state, task_id=SEAM_T))
+        out.append(msg(t, self.SITE, self.C1, "task/proposal", task_id=SEAM_T, surface="bottom-shell", path=path, confidence=confidence))
+
+
+def ship_block_basic():
+    """스파이더 1: 제안(0.5s) → 실행(2s~8s, 진행률 0.5s마다, 토치가 용접선을 따라간다) → 완료(8s). 스파이더 2는 대기. 10초.
+    옛 weld-basic과 같은 시간표(DY-01~04, DY-06)."""
+    b = Block()
+    out = b.start()
+    b.propose(out, 500, b.seam, 0.87)
+    out.append(msg(2000, b.SITE, b.C1, "task/state", state="running", task_id=SEAM_T))
+    for t in range(2000, 8001, 500):
+        out.append(msg(t, b.SITE, b.C1, "task/progress", task_id=SEAM_T, progress=round((t - 2000) / 6000, 4)))
+    out.append(msg(8000, b.SITE, b.C1, "task/state", state="completed", task_id=SEAM_T))
+    start, end = b.arm(0.0), b.arm(1.0)
+    for t in range(0, 10001, ROBOT_HZ_MS):
+        if t < 1000:
+            arm = ZERO_ARM
+        elif t < 2000:
+            arm = _blend(ZERO_ARM, start, (t - 1000) / 1000)
+        elif t <= 8000:
+            arm = b.arm((t - 2000) / 6000)
+        elif t < 9000:
+            arm = _blend(end, ZERO_ARM, (t - 8000) / 1000)
+        else:
+            arm = ZERO_ARM
+        b.s1(out, t, arm)
+        b.s2(out, t)
+    return out
+
+
+def ship_block_edit():
+    """스파이더 1: 제안(0.5s) → 수정 시작(1.5s) → 수렴 결과(2.5s) → 수렴 경로로 다시 제안(3.5s). 6초. DY-04 수정 중, DY-07."""
+    b = Block()
+    out = b.start()
+    b.propose(out, 500, b.seam, 0.62)
+    out.append(msg(1500, b.SITE, b.C1, "task/state", state="editing", task_id=SEAM_T))
+    out.append(msg(2500, b.SITE, b.C1, "task/snap", task_id=SEAM_T, surface="bottom-shell", ok=True, path=b.snap))
+    b.propose(out, 3500, b.snap, 0.95)
+    for t in range(0, 6001, ROBOT_HZ_MS):
+        b.s1(out, t)
+        b.s2(out, t)
+    return out
+
+
+def ship_block_alarm():
+    """스파이더 1: 실행(1s~) 중 경고 알람(3s) → 치명 알람과 긴급정지(3.5s) → 치명 해제(5s) → 경고 해제(5.5s). 7초. DY-04 정지, DY-05."""
+    b = Block()
+    out = b.start()
+    b.propose(out, 200, b.seam, 0.9)
+    out.append(msg(1000, b.SITE, b.C1, "task/state", state="running", task_id=SEAM_T))
+    for t in range(1000, 3501, 500):
+        out.append(msg(t, b.SITE, b.C1, "task/progress", task_id=SEAM_T, progress=round((t - 1000) / 6000, 4)))
+    out.append(msg(3000, b.SITE, b.C1, "alarm", alarm_id="a-1", severity="warning", code="SCENE_CHANGED", message="작업판 주변 장면 변화 감지", active=True))
+    out.append(msg(3500, b.SITE, b.C1, "alarm", alarm_id="a-2", severity="critical", code="ESTOP", message="긴급정지", active=True))
+    out.append(msg(3500, b.SITE, b.C1, "task/state", state="estopped", task_id=SEAM_T))
+    out.append(msg(5000, b.SITE, b.C1, "alarm", alarm_id="a-2", severity="critical", code="ESTOP", message="긴급정지", active=False))
+    out.append(msg(5500, b.SITE, b.C1, "alarm", alarm_id="a-1", severity="warning", code="SCENE_CHANGED", message="작업판 주변 장면 변화 감지", active=False))
+    for t in range(0, 7001, ROBOT_HZ_MS):
+        b.s1(out, t, b.arm(min((t - 1000) / 6000, 2500 / 6000)))
+        b.s2(out, t)
+    return out
+
+
+def ship_block_offline():
+    """스파이더 1 실행 중 서버 offline(4s, LWT) → 다시 online(6s, retained 상태 재발행). 8초. DY-08."""
+    b = Block()
+    out = b.start()
+    b.propose(out, 200, b.seam, 0.9)
+    out.append(msg(1000, b.SITE, b.C1, "task/state", state="running", task_id=SEAM_T))
+    out.append(msg(3500, b.SITE, b.C1, "task/progress", task_id=SEAM_T, progress=0.4))
+    out.append(msg(4000, b.SITE, b.C1, "status", state="offline"))
+    out.append(msg(6000, b.SITE, b.C1, "status", state="online"))
+    out.append(msg(6000, b.SITE, b.C1, "task/state", state="paused", task_id=SEAM_T))
+    out.append(msg(6000, b.SITE, b.C1, "task/proposal", task_id=SEAM_T, surface="bottom-shell", path=b.seam, confidence=0.9))
+    out.append(msg(6000, b.SITE, b.C1, "task/progress", task_id=SEAM_T, progress=0.4))
+    for t in list(range(0, 3901, ROBOT_HZ_MS)) + list(range(6000, 8001, ROBOT_HZ_MS)):  # offline 동안 robot/state 없음
+        b.s1(out, t, b.arm(min((t - 1000) / 6000, 0.4)))
+    for t in range(0, 8001, ROBOT_HZ_MS):
+        b.s2(out, t)
+    return out
+
+
+def ship_block_stale():
+    """스파이더 1 robot/state가 3초~6초 끊겼다가 재개. 서버는 online. 8초. DY-09."""
+    b = Block()
+    out = b.start()
+    for t in list(range(0, 3001, ROBOT_HZ_MS)) + list(range(6000, 8001, ROBOT_HZ_MS)):
+        b.s1(out, t, b.arm((t % 4000) / 4000))
+    for t in range(0, 8001, ROBOT_HZ_MS):
+        b.s2(out, t)
+    return out
+
+
 FIXTURES = {
-    "idle": idle,
-    "weld-basic": weld_basic,
-    "weld-edit": weld_edit,
-    "alarm": alarm,
-    "offline": offline,
-    "stale": stale,
-    # M4 공장 사이트(셀 1개)
+    # 제조공장(고정 로봇 셀 1개, M4)
     "factory-idle": lambda: idle(*FACTORY),
     "factory-weld-basic": lambda: weld_basic(*FACTORY),
-    # 조선소 블록 내부, 4족 이동 용접 로봇(ADR 0003)
+    # 조선소 건조 도크 블록 내부, 4족 이동 용접 로봇(ADR 0003)
     "ship-block-idle": ship_block_idle,
     "ship-block-weld": ship_block_weld,
+    "ship-block-basic": ship_block_basic,
+    "ship-block-edit": ship_block_edit,
+    "ship-block-alarm": ship_block_alarm,
+    "ship-block-offline": ship_block_offline,
+    "ship-block-stale": ship_block_stale,
 }
 
 

@@ -18,7 +18,7 @@ export default tseslint.config(
       'no-restricted-syntax': [
         'error',
         {
-          selector: "Literal[value=/^(shipyard|factory|weld-cell-\\d+)$/]",
+          selector: "Literal[value=/^(ship-block|factory|spider-\\d+|weld-booth-\\d+)$/]",
           message: '사이트·셀 이름을 코드에 쓰지 않는다. site-config에서 읽는다.',
         },
       ],

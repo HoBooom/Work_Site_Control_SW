@@ -44,8 +44,8 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 토픽 메시지를 시간 순서로 적은 파일이다. 한 줄이 메시지 하나다.
 
 ```
-{"t": 0,    "topic": "innoworks/shipyard/weld-cell-1/status",     "payload": {"v": 1, "ts": 0, "state": "online"}}
-{"t": 50,   "topic": "innoworks/shipyard/weld-cell-1/robot/state", "payload": {...}}
+{"t": 0,    "topic": "innoworks/ship-block/spider-1/status",      "payload": {"v": 1, "ts": 0, "state": "online"}}
+{"t": 50,   "topic": "innoworks/ship-block/spider-1/robot/state", "payload": {...}}
 ```
 
 - `t`는 시나리오 시작부터의 ms다.
@@ -56,20 +56,19 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 
 | 이름 | 내용 | 주로 검증하는 기능 |
 | --- | --- | --- |
-| `idle` | 로봇이 홈 자세로 정지, 작업 없음 | RD, IX |
-| `weld-basic` | 제안 → 승인 → 실행(진행률 0→100%) → 완료 | DY-01, 03, 04, 06 |
-| `weld-edit` | 제안 → 수정 → 수렴 결과 → 승인 | DY-07 |
-| `alarm` | 실행 중 알람 발생, 정지, 해제 | DY-05 |
-| `offline` | 실행 중 서버 offline, 복구 | DY-08 |
-| `stale` | `robot/state`가 3초간 끊겼다가 재개 | DY-09 |
-| `two-cells` | 셀 2개가 서로 다른 작업을 동시에 진행. 아직 없음: 지금은 `weld-basic`(셀 1 작업, 셀 2 대기)으로 DY-02를 본다 | DY-02 |
-| `factory-idle`, `factory-weld-basic` | 공장 사이트(셀 1개)의 `idle`, `weld-basic`. 생성기 함수에 사이트·셀을 넘겨 만든다(M4) | M4 |
+| `ship-block-idle` | 스파이더 1은 바닥 외판, 스파이더 2는 측면 외판에 붙어 정지, 작업 없음 | RD, IX |
+| `ship-block-basic` | 스파이더 1: 제안 → 실행(진행률 0→100%, 토치가 용접선을 따라감) → 완료. 스파이더 2 대기 | DY-01~04, 06 |
+| `ship-block-edit` | 제안 → 수정 → 수렴 결과 → 다시 제안 | DY-04, 07 |
+| `ship-block-alarm` | 실행 중 알람 발생, 긴급정지, 해제 | DY-04, 05 |
+| `ship-block-offline` | 실행 중 서버 offline, 복구(retained 재발행) | DY-08 |
+| `ship-block-stale` | 스파이더 1 `robot/state`가 3초간 끊겼다가 재개 | DY-09 |
+| `factory-idle`, `factory-weld-basic` | 공장 사이트(고정 로봇 셀 1개)의 대기, 기본 용접. 생성기 함수에 사이트·셀을 넘겨 만든다(M4) | M4, 고정 로봇 |
 | `ship-block-idle` | 블록 내부: 스파이더 1은 바닥 외판, 스파이더 2는 측면 외판에 붙어 정지 | DY-10 |
 | `ship-block-weld` | 스파이더 1이 론지 사이를 걸어(트롯, 디딘 발은 강판에 고정) 작업 위치로 → 제안 → 실행(토치가 용접선을 따라감) → 완료. 스파이더 2는 수직 용접선 승인 대기 | DY-10, DY-11 |
 
 블록 픽스처는 로봇 형상을 대역 URDF에서, 면 위치를 site-config에서 읽어 만든다(걸음의 hip_yaw, 팔 역기구학). 로봇이나 블록을 바꾸면 `make_fixtures.py`를 다시 돌린다. `e2e/mobile.spec.ts`가 결과를 확인한다.
 
-위 표의 이름 없는 것은 조선소 픽스처다. 다른 사이트의 픽스처는 `{사이트}-` 접두어를 붙인다. 한 픽스처의 토픽은 한 사이트만 쓴다(`e2e/data.ts fixturesOfSite`가 이것으로 사이트별 픽스처를 찾는다).
+픽스처 이름은 `{사이트}-` 접두어를 붙인다. `/lab`에 fixture 인자가 없으면 `{사이트}-idle`을 쓴다. 한 픽스처의 토픽은 한 사이트만 쓴다(`e2e/data.ts fixturesOfSite`가 이것으로 사이트별 픽스처를 찾는다).
 
 ## 로봇 랩
 
@@ -82,7 +81,7 @@ frontend/src/lab/       트윈 랩(씬만 띄우는 개발용 화면)
 사이드 패널 없이 씬만 띄우는 화면이다. 주소의 인자로 상태를 고정한다.
 
 ```
-/lab?site=shipyard&fixture=weld-basic&t=3200&preset=overview&quality=high&freeze=1
+/lab?site=ship-block&fixture=ship-block-basic&t=3200&preset=overview&quality=high&freeze=1
 ```
 
 | 인자 | 뜻 |
@@ -142,7 +141,7 @@ digital-twin/harness/check.sh              # L0~L4
 digital-twin/harness/check.sh --level 2    # L0~L2만(빠른 확인)
 digital-twin/harness/check.sh --perf       # L5 포함
 digital-twin/harness/check.sh --candidates # L4 장면을 out/review/에 후보로 찍기(기준 이미지는 그대로)
-digital-twin/harness/shot.sh "site=shipyard&fixture=weld-basic&t=3200&preset=cell-1"
+digital-twin/harness/shot.sh "site=ship-block&fixture=ship-block-basic&t=3200&preset=spider-1"
 ```
 
 - 실패하면 종료 코드가 0이 아니다.
@@ -172,7 +171,7 @@ digital-twin/harness/shot.sh "site=shipyard&fixture=weld-basic&t=3200&preset=cel
 
 ```
 기능: DY-03 용접선
-픽스처: weld-basic, t=1200
+픽스처: ship-block-basic, t=1200
 완료 기준: 선의 각 점이 SC-02로 계산한 좌표와 1mm 이내
 추가할 검사: e2e/seam.spec.ts (L3), shots.json에 장면 1개 (L4)
 건드리는 곳: frontend/src/scene/seam/

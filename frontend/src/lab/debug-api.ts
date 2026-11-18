@@ -89,6 +89,8 @@ export interface CellViewInfo {
   contacts: Record<string, boolean>;
   /** 발 접촉 표시의 중심(사이트 좌표) */
   contactRings: Record<string, V3>;
+  /** RD-06 용접 아크: 보이는가, 위치(사이트 좌표). 토치가 없는 로봇은 null */
+  arc: { on: boolean; position: V3 } | null;
 }
 
 export interface RenderInfo {
@@ -297,6 +299,7 @@ export function installDebugApi() {
           }
           return; // 표시물은 로봇 색 판정에서 뺀다
         }
+        if (o.userData.overlay) return; // 아크 등 연출(RD-06)
         robotMeshes++;
         const m = (Array.isArray(o.material) ? o.material[0] : o.material) as Material & { color?: Color };
         // 로봇은 팔레트 텍스처로 색을 낸다(Robot.tsx). 지금 팔레트의 색을 모두 본다
@@ -311,6 +314,12 @@ export function installDebugApi() {
         stale: !!document.querySelector(`[data-testid="${staleTestId(site, cell)}"]`),
         contacts,
         contactRings,
+        arc: (() => {
+          const o = three().scene.getObjectByName(`arc:${site}/${cell}`);
+          if (!o) return null;
+          o.updateWorldMatrix(true, false);
+          return { on: isVisible(o), position: sceneToSite(o.getWorldPosition(new Vector3())) };
+        })(),
       };
     },
     screen: (site, cell, part) => {
@@ -398,7 +407,8 @@ export function installDebugApi() {
         while (p && !p.name.startsWith('robot:')) p = p.parent;
         if (p) {
           robots++;
-          if (!o.castShadow) robotsCastShadow = false;
+          // 접촉 고리 같은 표시물(userData.contact)은 그림자를 드리우지 않는다
+          if (!o.castShadow && !o.userData.contact && !o.userData.overlay) robotsCastShadow = false;
         }
       });
       scene.getObjectByName(`background:${bound?.site}`)?.traverse((o) => {

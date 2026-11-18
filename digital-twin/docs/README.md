@@ -24,9 +24,9 @@
 ```
 digital-twin/
 ├─ assets/          재사용 단위: robot/(URDF+STL), props/(USD), materials/(재질 라이브러리), gen/(절차적 생성기)
-├─ sites/           shipyard.usda, factory.usda  (assets를 reference로 조립)
+├─ sites/           ship-block.usda, factory.usda  (assets를 reference로 조립)
 ├─ pipeline/        validate.py, build.py, glb.py(USD→GLB), check_glb.py, test_pipeline.py, pyproject.toml(uv)
-├─ site-config/     shipyard.json, factory.json  (웹이 읽는 설정)
+├─ site-config/     ship-block.json, factory.json  (웹이 읽는 설정)
 ├─ fixtures/        시나리오 녹화본(JSONL). 트윈 랩과 tools/play.py가 같이 쓴다
 └─ harness/         검사 명령, Playwright 테스트, 기준 스크린샷
 ```
@@ -38,9 +38,9 @@ digital-twin/
 ## 이름 규칙: prim 경로 = 토픽 = 설정 키
 
 ```
-USD prim     /Shipyard/WeldCell1/Robot
-토픽         innoworks/shipyard/weld-cell-1/robot/...
-site-config  sites.shipyard.cells["weld-cell-1"]
+USD prim     /ShipBlock/Spider1/Robot
+토픽         innoworks/ship-block/spider-1/robot/...
+site-config  ship-block.json cells[id = "spider-1"]
 ```
 
 웹은 토픽의 `{site}/{cell}`만 보고 갱신할 3D 객체를 찾는다. 사이트를 추가할 때는 USD 장면과 site-config만 더하고 코드는 고치지 않는다.
@@ -72,9 +72,10 @@ site-config의 셀 좌표는 손으로 고치지 않는다. USD를 고치고 다
 
 | 사이트 | 내용 | 로봇 |
 | --- | --- | --- |
-| `shipyard` | 조선소 블록 용접 구역(고정 셀 2개, M1~M3) | 고정형 대역 6축 |
 | `factory` | 제조공장 용접 부스 1개(M4) | 고정형 대역 6축 |
 | `ship-block` | 건조 도크 안 이중저 블록(ADR 0003). 외판·론지·늑판·거더·측면 외판, 면 2개(`bottom-shell`, `side-shell`). 주변: 도크 벽·안벽, 앞에 탑재된 선체(비계), 뒤에 대기 블록, 골리앗·지브 크레인, 블록 옆 작업 장비(운영자 책상, 로봇 투입 카트, 송풍기·덕트, 가스 랙, 분전반, 적치 자재, 비계 타워, 고소 작업대, 안전 펜스) | 4족 자석발 이동 용접 로봇 2대 |
+
+M1~M3의 고정 셀 조선소 사이트 `shipyard`는 ship-block으로 대체하고 지웠다(2026-11-18). 고정 로봇 셀은 `factory`가 검사한다.
 
 이동 로봇 사이트는 셀에 `Plate`를 두지 않는다. 셀 자세는 대기 위치이고, 움직이는 동안은 `robot/state.base`가 자세를 준다.
 용접선이 놓이는 면은 에셋 생성기가 형상과 같은 숫자로 `Surfaces/*` 기준점(role `surface`, `innoworks:sizeMm`, 회전 허용)을 쓰고, `build.py`가 site-config `surfaces`로 옮긴다.

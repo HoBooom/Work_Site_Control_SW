@@ -5,7 +5,8 @@ export type { QualityTier };
 export interface LabParams {
   /** null이면 첫 번째 사이트 */
   site: string | null;
-  fixture: string;
+  /** null이면 그 사이트의 `{site}-idle`(없으면 첫 픽스처) */
+  fixture: string | null;
   t: number;
   /** null이면 site-config의 첫 번째 프리셋 */
   preset: string | null;
@@ -24,7 +25,7 @@ export function parseLabParams(search: string): LabParams {
   if (quality !== null && quality !== 'high' && quality !== 'low') throw new Error(`quality는 high 또는 low다: ${quality}`);
   return {
     site: q.get('site'),
-    fixture: q.get('fixture') ?? 'idle',
+    fixture: q.get('fixture'),
     t,
     preset: q.get('preset'),
     quality,

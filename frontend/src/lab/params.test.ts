@@ -5,7 +5,7 @@ describe('parseLabParams', () => {
   it('기본값', () => {
     expect(parseLabParams('')).toEqual({
       site: null,
-      fixture: 'idle',
+      fixture: null,
       t: 0,
       preset: null,
       quality: null,

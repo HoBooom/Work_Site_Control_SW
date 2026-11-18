@@ -15,6 +15,8 @@ describe('autoQuality', () => {
   it('low는 high보다 가볍다', () => {
     expect(QUALITY.low.shadowMapSize).toBeLessThan(QUALITY.high.shadowMapSize);
     expect(QUALITY.low.ssao).toBe(false);
+    expect(QUALITY.high.bloom).toBe(true);
+    expect(QUALITY.low.bloom).toBe(false);
     expect(QUALITY.low.msaa).toBe(0);
   });
 });

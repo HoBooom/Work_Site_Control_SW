@@ -1,5 +1,5 @@
 import { Select } from '@react-three/postprocessing';
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import { createPortal, useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useMemo, useRef, useState } from 'react';
 import {
   BufferGeometry,
@@ -16,8 +16,11 @@ import {
   NearestFilter,
   RGBAFormat,
   RingGeometry,
+  Vector3,
+  type Group,
   type MeshPhongMaterial,
   type Object3D,
+  type PointLight,
 } from 'three';
 import { mergeGeometries, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { suspend } from 'suspend-react';
@@ -268,6 +271,77 @@ function showContacts(robot: URDFRobot, contacts: Record<string, boolean> | null
   }
 }
 
+// ---------- RD-06 용접 아크 ----------
+
+/** 공구 링크 이름 규약: 토치가 달린 링크는 `torch`(spider.py, make_robot.py) */
+const TORCH_LINK = 'torch';
+/** 아크 코어 색(linear HDR). bloom 문턱(Effects ARC_BLOOM_THRESHOLD)보다 몇 배 밝다 */
+const ARC_CORE = new Color(6, 7.5, 10);
+const ARC_LIGHT = new Color('#a9c8ff');
+const ARC_LIGHT_INTENSITY = 1.6;
+/** 깜빡임 한 칸(ms). 가상 시계로 계산해 freeze=1이면 멈춘다(결정성) */
+const ARC_FLICKER_MS = 45;
+
+/** 토치 노즐 끝: 토치 링크 형상에서 링크 원점에서 가장 먼 꼭짓점 */
+function torchTip(robot: URDFRobot): { link: Object3D; local: Vector3 } | null {
+  const link = robot.links[TORCH_LINK];
+  const mesh = link?.children.find(isVisual)?.children[0];
+  if (!link || !(mesh instanceof Mesh)) return null;
+  const pos = (mesh.geometry as BufferGeometry).getAttribute('position');
+  const v = new Vector3();
+  const best = new Vector3();
+  let max = -1;
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    if (v.lengthSq() > max) {
+      max = v.lengthSq();
+      best.copy(v);
+    }
+  }
+  return { link, local: best };
+}
+
+/** 정수 → [0, 1) 결정적 잡음 */
+const hash = (n: number) => {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+/**
+ * RD-06: 작업 상태가 실행 중(running)이고 온라인일 때만 토치 끝에 아크(밝은 코어 + 점광원)를 켠다.
+ * 점광원은 늘 장면에 두고 세기만 0으로 내린다(빛 수가 바뀌면 모든 재질 셰이더를 다시 컴파일해 프레임이 멈춘다).
+ */
+function WeldArc({ robot, site, cellId }: { robot: URDFRobot; site: string; cellId: string }) {
+  const tip = useMemo(() => torchTip(robot), [robot]);
+  const now = useTwinNow();
+  const key = cellKey(site, cellId);
+  const core = useRef<Group>(null);
+  const light = useRef<PointLight>(null);
+  useFrame(() => {
+    const c = useTwinStore.getState().cells[key];
+    const on = c?.task?.state === 'running' && c.online !== false;
+    const f = 0.7 + 0.3 * hash(Math.floor(now() / ARC_FLICKER_MS));
+    if (core.current) {
+      core.current.visible = on;
+      core.current.scale.setScalar(0.8 + 0.4 * f);
+    }
+    if (light.current) light.current.intensity = on ? ARC_LIGHT_INTENSITY * f : 0;
+  });
+  if (!tip) return null;
+  return createPortal(
+    <group position={tip.local}>
+      <group ref={core} name={objectName('arc', site, cellId)} visible={false}>
+        <mesh userData={{ overlay: true }}>
+          <sphereGeometry args={[0.009, 12, 8]} />
+          <meshBasicMaterial color={ARC_CORE} toneMapped={false} />
+        </mesh>
+      </group>
+      <pointLight ref={light} color={ARC_LIGHT} intensity={0} distance={2.5} decay={2} />
+    </group>,
+    tip.link,
+  );
+}
+
 /**
  * DY-01: robot/state 샘플을 보간해 매 프레임 관절에 건다. 셀마다 URDF를 복제해 쓴다.
  * DY-08: 오프라인이면 회색. DY-09: 샘플이 끊기면 마지막 자세를 두고 "멈춤" 표시. IX-02: 누르면 선택.
@@ -323,6 +397,7 @@ export function Robot({ site, cellId, url }: Props) {
       <Select enabled={isSame(selected, me)}>
         <primitive object={robot} />
       </Select>
+      <WeldArc robot={robot} site={site} cellId={cellId} />
       {stale && (
         <DomLabel position={[0, 0, 1.75]} testId={staleTestId(site, cellId)} variant="badge" content={STALE_CONTENT} />
       )}

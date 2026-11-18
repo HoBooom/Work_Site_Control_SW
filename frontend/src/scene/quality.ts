@@ -9,11 +9,13 @@ export interface QualitySettings {
   /** PCF 그림자 경계 흐림 반경. three 0.187에서 PCFSoftShadowMap이 없어져 PCF + radius로 부드럽게 한다 */
   shadowRadius: number;
   ssao: boolean;
+  /** RD-06 용접 아크 bloom(밝기 문턱을 넘는 아크만 번진다) */
+  bloom: boolean;
 }
 
 export const QUALITY: Record<QualityTier, QualitySettings> = {
-  high: { dpr: [1, 2], msaa: 4, shadowMapSize: 2048, shadowRadius: 4, ssao: true },
-  low: { dpr: [1, 1.5], msaa: 0, shadowMapSize: 1024, shadowRadius: 1, ssao: false },
+  high: { dpr: [1, 2], msaa: 4, shadowMapSize: 2048, shadowRadius: 4, ssao: true, bloom: true },
+  low: { dpr: [1, 1.5], msaa: 0, shadowMapSize: 1024, shadowRadius: 1, ssao: false, bloom: false },
 };
 
 /** 화면이 작은 터치 기기면 low. 큰 터치 노트북은 high로 둔다 */

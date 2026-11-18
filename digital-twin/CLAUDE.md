@@ -2,7 +2,7 @@
 
 먼저 읽을 것: `docs/spec.md`(무엇을, 어느 수준까지), `docs/harness.md`(어떻게 검증하나).
 현재 단계: M2 완료(2026-11-17, 기준 이미지 6장 승인). M3-a 완료(2026-11-17). M3-b(로봇·조선소 에셋 품질) 완료(2026-11-18, 기준 이미지 6장 승인). M3 사람 검수(realvirtual 참조 화면 비교)가 남아 있다. M4(공장 사이트, 프론트 코드 변경 0줄) 완료(2026-11-18, 기준 이미지 8장).
-방향 전환(ADR 0003): 로봇을 이동형 4족 자석발 용접 로봇으로 바꾼다. 1단계 로봇 모델(`spider-welder`, 로봇 랩 /lab/robot), 2단계 계약(`robot/state.base`·`contacts`, site-config `surfaces`, 경로 `surface`) 완료. 3단계 환경(사이트 `ship-block`: 이중저 블록 내부, 스파이더 2대, 면 위 용접선, 픽스처 걸음·용접) 완료(2026-11-18, 기준 이미지 4장 승인, 전체 12장). 로봇을 링크당 메시 하나로 합쳐 드로우 콜을 줄였다(ship-block 291 → 147). 따라가기 카메라(IX-07)와 발 접촉 표시(DY-12) 완료(2026-11-18, 걷는 중 클로즈업 승인, 기준 이미지 13장). ship-block 주변을 건조 도크로 구성(도크·선체·크레인, 블록 옆 작업 장비), 기준 이미지 3장 승인(2026-11-18). 남은 것: 이동 경로(계획) 표시, 옛 `shipyard` 정리 여부.
+방향 전환(ADR 0003): 로봇을 이동형 4족 자석발 용접 로봇으로 바꾼다. 1단계 로봇 모델(`spider-welder`, 로봇 랩 /lab/robot), 2단계 계약(`robot/state.base`·`contacts`, site-config `surfaces`, 경로 `surface`) 완료. 3단계 환경(사이트 `ship-block`: 이중저 블록 내부, 스파이더 2대, 면 위 용접선, 픽스처 걸음·용접) 완료(2026-11-18, 기준 이미지 4장 승인, 전체 12장). 로봇을 링크당 메시 하나로 합쳐 드로우 콜을 줄였다(ship-block 291 → 147). 따라가기 카메라(IX-07)와 발 접촉 표시(DY-12) 완료(2026-11-18, 걷는 중 클로즈업 승인, 기준 이미지 13장). ship-block 주변을 건조 도크로 구성(도크·선체·크레인, 블록 옆 작업 장비), 기준 이미지 3장 승인(2026-11-18). 옛 고정 셀 사이트 `shipyard`를 지우고 그 검사(scene·state·interaction·render·lab)를 ship-block 시나리오 픽스처로 옮김, 용접 아크 연출(RD-06) 구현. 기준 이미지 10장 승인(2026-11-18, 전체 11장: ship-block 9, factory 2). 남은 것: 이동 경로(계획) 표시.
 
 ## 작업 루프
 
@@ -19,7 +19,7 @@ digital-twin/harness/check.sh              # L0~L4
 digital-twin/harness/check.sh --level 2    # L0~L2, 저장할 때마다
 digital-twin/harness/check.sh --perf       # L5 포함, 에셋을 바꿨거나 마일스톤을 닫을 때
 digital-twin/harness/check.sh --candidates # 화면을 바꿨으면: 후보를 out/review/에 찍어 사람에게 보인다
-digital-twin/harness/shot.sh "site=shipyard&fixture=idle&t=1000&preset=overview"
+digital-twin/harness/shot.sh "site=ship-block&fixture=ship-block-weld&t=8000&preset=spider-1"
 npm run dev -w frontend                    # http://localhost:5173/lab , 로봇 랩 http://localhost:5173/lab/robot
 digital-twin/harness/shot.sh "robot?robot=spider-welder&mount=wall"   # 로봇 랩 한 장
 python3 digital-twin/fixtures/make_fixtures.py   # 픽스처 재생성
@@ -53,6 +53,7 @@ uv run --project digital-twin/pipeline python digital-twin/pipeline/build.py   #
 
 - 3D 위치를 따라다니는 글자는 `scene/ui/DomLabel`을 쓴다. drei `Html`은 Canvas를 다시 만들 때(사이트·품질 전환) React 동기 unmount 오류를 낸다.
 - URDFLoader는 링크 메시가 오기 전에 로봇을 돌려준다. 전용 LoadingManager로 끝까지 기다린다(Robot.tsx loadUrdf).
+- 로봇의 토치 링크 이름은 `torch`로 둔다. 용접 아크(RD-06)가 그 링크 형상의 가장 먼 꼭짓점을 노즐 끝으로 쓴다. 아크 점광원은 늘 장면에 있고 세기만 바뀐다(빛 수가 바뀌면 셰이더를 다시 컴파일한다).
 - 로봇은 링크마다 재질별 메시를 하나로 합쳐 그린다(Robot.tsx prepare). 재질 차이는 1×N 팔레트 텍스처(색, 거칠기·금속성)가 맡고, 꼭짓점 UV가 자기 재질 텍셀을 가리킨다. 재질 색을 보려면 `material.color`가 아니라 `material.userData.palette`를 본다. 로봇 1대의 드로우 콜 ≈ (형상 있는 링크 수) × 2(본 패스 + 그림자).
 - 키 라이트 그림자 범위는 셀·프리셋 목표·surfaces를 감싼 영역이다(scene/bounds.ts). 멀리 선 높은 배경 물체는 그림자 끝이 잘린 조각으로 보이니 셀에서 떨어뜨린다(docs/README.md "사이트 추가하기").
 - three 원기둥은 Y축 방향이다. 사이트 그룹(Z-up) 안에서 세우려면 X축으로 90° 돌린다.

@@ -26,10 +26,11 @@ const LAMP_HEIGHT_M = 1.7;
 /** 셀 좌표계 기준 알람 마커 쌓기 시작점(로봇 위) */
 const ALARM_BASE: V3 = [0.25, 0, 1.8];
 const ALARM_STEP_M = 0.28;
-/** 이동 로봇: 로봇 좌표계 기준 상태 비콘(몸통 뒤 윗면), 라벨, 알람 마커 시작점. 벽에 붙으면 로봇 +Z(벽 법선) 쪽으로 뜬다 */
+/** 이동 로봇: 상태 비콘 위치(로봇 좌표계, 몸통 뒤 윗면) */
 const BEACON_POS: V3 = [-0.16, 0, 0.075];
-const MOBILE_LABEL_Z_M = 0.95;
-const MOBILE_ALARM_BASE: V3 = [0, 0, 1.15];
+/** 이동 로봇: 비콘 위(사이트 +Z) 라벨 높이, 알람 마커 시작점. 로봇이 벽에 붙어도 위로 뜬다 */
+const MOBILE_LABEL_UP_M = 0.55;
+const MOBILE_ALARM_BASE: V3 = [0.3, 0, 0.75];
 const Z_AXIS = new Vector3(0, 0, 1);
 
 interface Props {
@@ -60,10 +61,20 @@ export function Cell({ site, cell, surfaces = [] }: Props) {
         {!mobile && <StatusLamp site={site} cell={cell} />}
         {!mobile && <AlarmMarkers site={site} cellId={cell.id} base={ALARM_BASE} />}
       </group>
-      <RobotMount site={site} cell={cell}>
+      <RobotMount
+        site={site}
+        cell={cell}
+        overhead={
+          mobile && (
+            <>
+              <StatusLabel site={site} cell={cell} />
+              <AlarmMarkers site={site} cellId={cell.id} base={MOBILE_ALARM_BASE} />
+            </>
+          )
+        }
+      >
         {robot.urdf && <Robot site={site} cellId={cell.id} url={robot.urdf} />}
         {mobile && <StatusLamp site={site} cell={cell} beacon />}
-        {mobile && <AlarmMarkers site={site} cellId={cell.id} base={MOBILE_ALARM_BASE} />}
       </RobotMount>
       {mobile && <SurfaceSeam site={site} cellId={cell.id} surfaces={surfaces} />}
     </>
@@ -81,9 +92,13 @@ function homePose(cell: CellConfig): { position: V3; yaw: number } {
   };
 }
 
-/** 로봇이 놓이는 그룹. robot/state.base가 있으면(이동 로봇) 매 프레임 보간한 몸통 자세로 옮긴다(관절과 같은 지연) */
-function RobotMount({ site, cell, children }: { site: string; cell: CellConfig; children: ReactNode }) {
+/**
+ * 로봇이 놓이는 그룹. robot/state.base가 있으면(이동 로봇) 매 프레임 보간한 몸통 자세로 옮긴다(관절과 같은 지연).
+ * overhead는 비콘 위치만 따라가고 돌지 않는 그룹에 둔다(라벨·알람 마커가 로봇이 벽에 붙어도 위로 뜨게).
+ */
+function RobotMount({ site, cell, children, overhead }: { site: string; cell: CellConfig; children: ReactNode; overhead?: ReactNode }) {
   const ref = useRef<Group>(null);
+  const anchor = useRef<Group>(null);
   const now = useTwinNow();
   const key = cellKey(site, cell.id);
   const home = useMemo(() => homePose(cell), [cell]);
@@ -99,13 +114,19 @@ function RobotMount({ site, cell, children }: { site: string; cell: CellConfig; 
       g.position.set(...home.position);
       g.quaternion.setFromAxisAngle(Z_AXIS, home.yaw);
     }
+    anchor.current?.position.copy(BEACON.clone().applyQuaternion(g.quaternion).add(g.position));
   });
   return (
-    <group ref={ref} position={home.position} rotation-z={home.yaw}>
-      {children}
-    </group>
+    <>
+      <group ref={ref} position={home.position} rotation-z={home.yaw}>
+        {children}
+      </group>
+      {overhead && <group ref={anchor}>{overhead}</group>}
+    </>
   );
 }
+
+const BEACON = new Vector3(...BEACON_POS);
 
 /** AS-03: 판 원점(모서리)이 그룹 원점, 윗면이 z=0 */
 function Plate({ site, cellId, sizeMm }: { site: string; cellId: string; sizeMm: [number, number] }) {
@@ -196,12 +217,6 @@ function StatusLamp({ site, cell, beacon = false }: { site: string; cell: CellCo
           <cylinderGeometry args={[0.024, 0.024, 0.04, 16]} />
           <meshStandardMaterial color={style.lamp} emissive={style.lamp} emissiveIntensity={0.8} toneMapped={false} />
         </mesh>
-        <DomLabel
-          position={[-BEACON_POS[0], 0, MOBILE_LABEL_Z_M]}
-          testId={labelTestId(site, cell.id)}
-          dataset={dataset}
-          content={{ dot: style.lamp, bold: cell.name, text: style.label }}
-        />
       </group>
     );
   }
@@ -228,6 +243,22 @@ function StatusLamp({ site, cell, beacon = false }: { site: string; cell: CellCo
         content={{ dot: style.lamp, bold: cell.name, text: style.label }}
       />
     </group>
+  );
+}
+
+/** 이동 로봇 라벨(IX-04): 비콘 바로 위(사이트 +Z)에 이름과 상태 */
+function StatusLabel({ site, cell }: { site: string; cell: CellConfig }) {
+  const key = cellKey(site, cell.id);
+  const state = useTwinStore((s) => cellVisualState(s.cells[key]));
+  const style = STATE_STYLE[state];
+  const dataset = useMemo(() => ({ state }), [state]);
+  return (
+    <DomLabel
+      position={[0, 0, MOBILE_LABEL_UP_M]}
+      testId={labelTestId(site, cell.id)}
+      dataset={dataset}
+      content={{ dot: style.lamp, bold: cell.name, text: style.label }}
+    />
   );
 }
 
