@@ -125,19 +125,29 @@ test.describe('관제 화면 @L3', () => {
     const app = await openApp(page);
     await expect(rowState(page, 'spider-1')).toHaveAttribute('data-state', 'proposed');
     await rowState(page, 'spider-1').click();
-    const check = async (what: string) => {
-      await expect.poll(async () => (await page.evaluate(() => window.__app!.overlay('spider-1'))) !== null).toBe(true);
-      const ov = (await page.evaluate(() => window.__app!.overlay('spider-1')))!;
+    // 화면 크기를 바꾼 직후에는 한 프레임 동안 옛 오버레이가 남는다 → 다시 그려질 때까지 기다렸다가 비교한다
+    const errors = async () => {
+      const ov = await page.evaluate(() => window.__app!.overlay('spider-1'));
+      if (!ov) return null;
       const cam = (await page.getByTestId('camera').boundingBox())!;
-      expect(Math.abs(ov.box[0] - cam.width), `${what}: 상자 폭`).toBeLessThanOrEqual(1);
       const px = (await page.evaluate(() => window.__app!.cells()['ship-block/spider-1'].proposal!.path_px))!;
       const scale = Math.min(cam.width / ov.frameSize[0], cam.height / ov.frameSize[1]);
       const ox = (cam.width - ov.frameSize[0] * scale) / 2;
       const oy = (cam.height - ov.frameSize[1] * scale) / 2;
-      expect(ov.points).toHaveLength(px.length);
-      ov.points.forEach(([x, y], i) => {
-        expect(Math.hypot(x - (ox + px[i][0] * scale), y - (oy + px[i][1] * scale)), `${what}: 점 ${i}`).toBeLessThanOrEqual(1);
-      });
+      if (ov.points.length !== px.length) return { box: Infinity, point: Infinity };
+      const point = Math.max(...ov.points.map(([x, y], i) => Math.hypot(x - (ox + px[i][0] * scale), y - (oy + px[i][1] * scale))));
+      return { box: Math.abs(ov.box[0] - cam.width), point };
+    };
+    const check = async (what: string) => {
+      await expect
+        .poll(async () => {
+          const e = await errors();
+          return e !== null && e.box <= 1 && e.point <= 1;
+        }, { message: `${what}: 오버레이 상자 폭과 점이 1px 안에서 맞아야 한다` })
+        .toBe(true);
+      const e = (await errors())!;
+      expect(e.box, `${what}: 상자 폭`).toBeLessThanOrEqual(1);
+      expect(e.point, `${what}: 점`).toBeLessThanOrEqual(1);
     };
     await check('노트북');
     await page.setViewportSize({ width: 820, height: 1180 });
@@ -202,6 +212,91 @@ test.describe('관제 화면 @L3', () => {
     const alarm = await page.evaluate(() => Object.values(window.__app!.cells()['ship-block/spider-1'].alarms)[0]);
     expect(alarm).toMatchObject({ code: 'CMD_REJECTED', cmd_id: 'stale000-0001' });
     await expect(rowState(page, 'spider-1'), '상태는 그대로').toHaveAttribute('data-state', 'proposed');
+    app.expectClean();
+  });
+
+  /** 패널 영상 위 경로 점(페이지 좌표)과 영상 상자 */
+  async function seamOnScreen(page: Page, cell: string) {
+    const cam = (await page.getByTestId('camera').boundingBox())!;
+    const ov = (await page.evaluate((c) => window.__app!.overlay(c), cell))!;
+    return { cam, ov, page: ov.points.map(([x, y]) => [cam.x + x, cam.y + y] as [number, number]) };
+  }
+
+  async function startEdit(page: Page, cell: string) {
+    await expect(rowState(page, cell)).toHaveAttribute('data-state', 'proposed');
+    await rowState(page, cell).click();
+    await page.getByTestId('btn-edit').click();
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'editing');
+    await expect(page.getByTestId('camera')).toHaveAttribute('data-mode', 'edit');
+    await expect(page.getByTestId('camera')).toHaveAttribute('data-src', new RegExp(`/frames/f-${cell}-`));
+    await expect.poll(async () => (await page.evaluate((c) => window.__app!.overlay(c)?.mode, cell))).toBe('edit');
+  }
+
+  async function drawWithMouse(page: Page, pts: [number, number][]) {
+    await page.mouse.move(...pts[0]);
+    await page.mouse.down();
+    for (const p of pts.slice(1)) await page.mouse.move(p[0], p[1], { steps: 6 });
+    await page.mouse.up();
+  }
+
+  test('UI-05: 수정 → 멈춘 영상 위에 그리면 손을 뗄 때 cmd/drag 한 번 → 수렴 경로로 다시 승인 대기', async ({ page }) => {
+    const app = await openApp(page);
+    await startEdit(page, 'spider-1');
+    const { page: seam, cam, ov } = await seamOnScreen(page, 'spider-1');
+    const stroke = [seam[2], seam[4], seam[6], seam[8]].map(([x, y]) => [x, y + 4] as [number, number]); // 용접선 약간 아래
+    await drawWithMouse(page, stroke);
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'proposed');
+    const sent = await page.evaluate(() => window.__app!.sent());
+    expect(sent.map((x) => x.suffix), '드래그 한 번에 명령 한 번').toEqual(['cmd/edit_start', 'cmd/drag']);
+    const c = await page.evaluate(() => window.__app!.cells()['ship-block/spider-1']);
+    // 수렴 결과로 새 제안이 왔다(store는 새 제안이 오면 수렴 결과를 비운다, DY-07)
+    expect(c.proposal?.path_px).toHaveLength(9);
+    // 수렴 경로는 그린 구간(첫 점 ~ 끝 점) 안의 용접선
+    const toFrame = ([x, y]: number[]) => [(x - cam.x - ov.fit.x) / ov.fit.scale, (y - cam.y - ov.fit.y) / ov.fit.scale];
+    const [x0] = toFrame(stroke[0]);
+    const [x1] = toFrame(stroke[stroke.length - 1]);
+    expect(c.proposal!.path_px![0][0]).toBeGreaterThan(x0 - 15);
+    expect(c.proposal!.path_px![8][0]).toBeLessThan(x1 + 15);
+    await expect(page.getByTestId('unit-confidence')).toHaveText('97%');
+    await expect(page.getByTestId('camera'), '수정이 끝나면 다시 실시간 영상').toHaveAttribute('data-mode', 'view');
+    app.expectClean();
+  });
+
+  test('UI-05: 용접선에서 먼 선은 수렴 실패(알람, 수정 중 유지) → 다시 그리면 성공', async ({ page }) => {
+    const app = await openApp(page);
+    await startEdit(page, 'spider-1');
+    const { cam, page: seam } = await seamOnScreen(page, 'spider-1');
+    await drawWithMouse(page, [
+      [cam.x + cam.width * 0.2, cam.y + cam.height * 0.92],
+      [cam.x + cam.width * 0.8, cam.y + cam.height * 0.92],
+    ]);
+    await expect(page.getByTestId('alarm-list')).toContainText('그린 선이 용접선에서 멀다');
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'editing');
+    await expect.poll(async () => (await page.evaluate(() => window.__app!.overlay('spider-1')?.failed))).toBe(true);
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-pending', '0');
+    await drawWithMouse(page, [seam[1], seam[5], seam[10]]);
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'proposed');
+    app.expectClean();
+  });
+
+  test('UI-05: 터치로 그려도 같고, 수정 중에는 스크롤이 막힌다. 짧게 톡 친 것은 보내지 않는다', async ({ page }) => {
+    const app = await openApp(page);
+    await startEdit(page, 'spider-2');
+    expect(await page.getByTestId('overlay').evaluate((el) => getComputedStyle(el).touchAction)).toBe('none');
+    const { page: seam } = await seamOnScreen(page, 'spider-2');
+    const touch = (type: string, [x, y]: number[]) =>
+      page.getByTestId('overlay').dispatchEvent(type, { pointerType: 'touch', isPrimary: true, pointerId: 11, clientX: x, clientY: y, bubbles: true });
+    // 톡: 거의 안 움직임 → 보내지 않는다
+    await touch('pointerdown', seam[3]);
+    await touch('pointerup', [seam[3][0] + 2, seam[3][1] + 1]);
+    await page.waitForTimeout(300);
+    expect((await page.evaluate(() => window.__app!.sent())).map((x) => x.suffix)).toEqual(['cmd/edit_start']);
+    // 그리기
+    await touch('pointerdown', seam[1]);
+    for (const p of [seam[3], seam[5], seam[7], seam[9]]) await touch('pointermove', [p[0] + 3, p[1]]);
+    await touch('pointerup', seam[10]);
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'proposed');
+    expect((await page.evaluate(() => window.__app!.sent())).map((x) => x.suffix)).toEqual(['cmd/edit_start', 'cmd/drag']);
     app.expectClean();
   });
 });

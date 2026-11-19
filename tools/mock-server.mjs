@@ -90,12 +90,14 @@ export async function startMockServer(opts = {}) {
   }
 
   // 셀마다 연결(유언), 명령·heartbeat를 받는 연결 하나
+  // 연결 id는 인스턴스마다 다르게: 같은 id로 다시 붙으면 브로커가 앞 연결을 끊어(세션 인계) 연결이 엉킬 수 있다
+  const instance = Math.random().toString(16).slice(2, 8);
   const clients = new Map();
   for (const cell of units.keys()) {
     const will = { topic: `${P}/${site}/${cell}/status`, payload: JSON.stringify({ v: 1, ts: Date.now(), state: 'offline' }), qos: 1, retain: true };
-    clients.set(cell, await connect(url, { clientId: `mock-server-${site}-${cell}-${process.pid}`, will }));
+    clients.set(cell, await connect(url, { clientId: `mock-server-${site}-${cell}-${instance}`, will }));
   }
-  const control = await connect(url, { clientId: `mock-server-${site}-control-${process.pid}` });
+  const control = await connect(url, { clientId: `mock-server-${site}-control-${instance}` });
 
   const send = (cell, { suffix, payload }) => {
     const spec = cellSpec.get(suffix);

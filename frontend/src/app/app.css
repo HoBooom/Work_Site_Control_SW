@@ -65,3 +65,6 @@
 .camera canvas { pointer-events: none; }
 .camera-tag { position: absolute; left: 8px; top: 8px; padding: 2px 8px; border-radius: 4px; background: rgba(240, 136, 62, 0.92); color: white; font-size: 12px; font-weight: 600; }
 .hint { font-size: 12px; color: #4a535c; min-height: 16px; }
+/* 수정 모드: 그리기를 받고 페이지 스크롤·확대를 막는다(UI-05) */
+.camera-edit { outline: 3px solid #f0883e; outline-offset: -3px; touch-action: none; }
+.camera-edit canvas { pointer-events: auto; cursor: crosshair; touch-action: none; }

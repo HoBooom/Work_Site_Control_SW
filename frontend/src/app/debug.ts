@@ -10,7 +10,7 @@ export interface AppDebugApi {
   selection(): Selection | null;
   cells(): Record<string, CellState>;
   /** 패널 영상 위에 그린 경로(화면 px, 영상 상자 기준)와 배치. 없으면 null */
-  overlay(cell: string): { points: [number, number][]; fit: { x: number; y: number; scale: number }; box: [number, number]; frameSize: [number, number]; src: string } | null;
+  overlay(cell: string): { points: [number, number][]; fit: { x: number; y: number; scale: number }; box: [number, number]; frameSize: [number, number]; src: string; mode: 'view' | 'edit'; failed: boolean } | null;
   /** 마지막으로 보낸 명령(cmd_id, 토픽 접미사, 대상 셀) */
   sent(): { cmd_id: string; suffix: string; cell: string | null }[];
 }

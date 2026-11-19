@@ -37,7 +37,7 @@ export function controlsFor(state: CellVisualState, pending: boolean, connected:
 export const HINT: Partial<Record<CellVisualState, string>> = {
   idle: 'AI 경로 제안을 기다리는 중',
   proposed: '제안 경로를 확인하고 승인하거나 수정한다',
-  editing: '수정 중: 멈춘 영상 위에 경로를 다시 그린다',
+  editing: '수정 중: 멈춘 영상 위에 용접선을 따라 다시 그린다. 손을 떼면 서버가 용접선에 맞춘다',
   running: '용접 중',
   completed: '용접이 끝났다. 결과를 확인한다',
   paused: '일시정지됨. 확인 뒤 재개한다',

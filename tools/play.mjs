@@ -54,7 +54,7 @@ export async function playFixture(lines, opts = {}) {
     const key = `${site}/${cell}`;
     if (clients.has(key)) continue;
     const will = { topic: `${topics.prefix}/${key}/status`, payload: JSON.stringify({ v: 1, ts: Date.now(), state: 'offline' }), qos: 1, retain: true };
-    clients.set(key, await connect(url, { clientId: `play-${key.replace('/', '-')}-${process.pid}`, will }));
+    clients.set(key, await connect(url, { clientId: `play-${key.replace('/', '-')}-${Math.random().toString(16).slice(2, 8)}`, will }));
   }
   const clientOf = (topic) => clients.get(parse(topic).site + '/' + parse(topic).cell);
   if (clear) {

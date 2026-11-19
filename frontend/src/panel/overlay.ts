@@ -36,3 +36,26 @@ export function splitAt(points: readonly (readonly number[])[], k: number): { do
   }
   return { done: pts, todo: [] };
 }
+
+/**
+ * UI-05: 손으로 그린 선(화면 좌표)을 원본 프레임 픽셀 경로로. 프레임 밖은 가장자리로 붙이고,
+ * 원본에서 minStepPx보다 가까운 점은 버린다(손 떨림·이벤트 폭주). 끝점은 남긴다.
+ */
+export function strokeToFrame(f: Fit, frameW: number, frameH: number, stroke: readonly (readonly number[])[], minStepPx = 4): [number, number][] {
+  const clamp = (v: number, hi: number) => Math.round(Math.max(0, Math.min(hi, v)) * 10) / 10;
+  const pts = stroke.map((p) => {
+    const [x, y] = boxToFrame(f, p);
+    return [clamp(x, frameW), clamp(y, frameH)] as [number, number];
+  });
+  if (pts.length < 2) return pts;
+  const out: [number, number][] = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const last = out[out.length - 1];
+    if (Math.hypot(pts[i][0] - last[0], pts[i][1] - last[1]) >= minStepPx) out.push(pts[i]);
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
+/** 꺾은선 길이 */
+export const polylineLength = (p: readonly (readonly number[])[]) => p.slice(1).reduce((s, q, i) => s + Math.hypot(q[0] - p[i][0], q[1] - p[i][1]), 0);

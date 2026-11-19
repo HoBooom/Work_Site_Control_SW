@@ -55,7 +55,7 @@ digital-twin/harness/check.sh                 # 트윈 검사 L0~L4 (/twin-check
 digital-twin/harness/shot.sh "<랩 주소 인자>"   # 장면 한 장 (/twin-shot)
 ```
 
-프론트(서버 전): 기능명세 `frontend/docs/spec.md`, F0·F1 완료(ADR 0005). 다음은 F2 수정 모드.
+프론트(서버 전): 기능명세 `frontend/docs/spec.md`, F0·F1·F2 완료(ADR 0005). 다음은 F3 긴급정지·알람·연결 상태·heartbeat.
 
 화면: 관제 `http://localhost:5173/?site=ship-block`(브로커·Mock 서버), 트윈 랩 `/lab`(픽스처) 또는 `/lab?site=ship-block&source=mqtt`(브로커), 로봇 랩 `/lab/robot`.
 
