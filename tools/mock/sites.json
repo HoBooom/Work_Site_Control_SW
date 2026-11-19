@@ -1,0 +1,67 @@
+{
+  "note": "Mock 서버(tools/mock-server.mjs)의 사이트별 설정. 로봇마다 영상 그림 종류(frames.mjs)와 용접선(면 좌표 mm). 용접선은 그 사이트 픽스처와 같은 자리다. 실제 카메라가 오면 이 파일 대신 서버의 카메라·비전을 쓴다. motion: 로봇 자세를 가져올 픽스처와 그 시각(대기 idle_t, 용접 구간 run, 완료 뒤 done_t). 용접 중에는 진행률에 맞춰 run 구간을 재생한다.",
+  "ship-block": {
+    "motion": {
+      "fixture": "ship-block-basic",
+      "idle_t": 500,
+      "run": [
+        2000,
+        8000
+      ],
+      "done_t": 9500
+    },
+    "spider-1": {
+      "frame": "fillet",
+      "surface": "bottom-shell",
+      "seam_mm": [
+        [
+          4420,
+          4012
+        ],
+        [
+          5180,
+          4012
+        ]
+      ]
+    },
+    "spider-2": {
+      "frame": "vertical",
+      "surface": "side-shell",
+      "seam_mm": [
+        [
+          6412,
+          1080
+        ],
+        [
+          6412,
+          380
+        ]
+      ]
+    }
+  },
+  "factory": {
+    "motion": {
+      "fixture": "factory-weld-basic",
+      "idle_t": 500,
+      "run": [
+        2000,
+        8000
+      ],
+      "done_t": 9500
+    },
+    "weld-booth-1": {
+      "frame": "plate",
+      "surface": null,
+      "seam_mm": [
+        [
+          100,
+          250
+        ],
+        [
+          900,
+          280
+        ]
+      ]
+    }
+  }
+}

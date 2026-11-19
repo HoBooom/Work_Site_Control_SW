@@ -1,13 +1,135 @@
 {
   "prefix": "innoworks",
-  "note": "셀 토픽은 {prefix}/{site}/{cell}/{suffix}. 스키마가 정해진 토픽만 적는다. 나머지는 정해질 때 추가한다.",
+  "note": "셀 토픽은 {prefix}/{site}/{cell}/{suffix}. 명령은 셀 토픽, 사이트 범위 명령은 {prefix}/{site}/{suffix}. 운영자 토픽은 {prefix}/operator/{client_id}/{suffix}.",
   "cell_topics": [
-    { "suffix": "robot/state",   "schema": "robot-state",   "dir": "server->web", "qos": 0, "retained": false },
-    { "suffix": "task/state",    "schema": "task-state",    "dir": "server->web", "qos": 1, "retained": true },
-    { "suffix": "task/proposal", "schema": "task-proposal", "dir": "server->web", "qos": 1, "retained": true },
-    { "suffix": "task/snap",     "schema": "task-snap",     "dir": "server->web", "qos": 1, "retained": false },
-    { "suffix": "task/progress", "schema": "task-progress", "dir": "server->web", "qos": 0, "retained": false },
-    { "suffix": "alarm",         "schema": "alarm",         "dir": "server->web", "qos": 1, "retained": false },
-    { "suffix": "status",        "schema": "status",        "dir": "server->web", "qos": 1, "retained": true }
+    {
+      "suffix": "robot/state",
+      "schema": "robot-state",
+      "dir": "server->web",
+      "qos": 0,
+      "retained": false
+    },
+    {
+      "suffix": "task/state",
+      "schema": "task-state",
+      "dir": "server->web",
+      "qos": 1,
+      "retained": true
+    },
+    {
+      "suffix": "task/proposal",
+      "schema": "task-proposal",
+      "dir": "server->web",
+      "qos": 1,
+      "retained": true
+    },
+    {
+      "suffix": "task/snap",
+      "schema": "task-snap",
+      "dir": "server->web",
+      "qos": 1,
+      "retained": false
+    },
+    {
+      "suffix": "task/progress",
+      "schema": "task-progress",
+      "dir": "server->web",
+      "qos": 0,
+      "retained": false
+    },
+    {
+      "suffix": "alarm",
+      "schema": "alarm",
+      "dir": "server->web",
+      "qos": 1,
+      "retained": false
+    },
+    {
+      "suffix": "status",
+      "schema": "status",
+      "dir": "server->web",
+      "qos": 1,
+      "retained": true
+    },
+    {
+      "suffix": "vision/metrics",
+      "schema": "vision-metrics",
+      "dir": "server->web",
+      "qos": 0,
+      "retained": false
+    }
+  ],
+  "command_topics": [
+    {
+      "suffix": "cmd/edit_start",
+      "schema": "cmd-edit-start",
+      "dir": "web->server",
+      "qos": 1,
+      "retained": false,
+      "scopes": [
+        "cell"
+      ]
+    },
+    {
+      "suffix": "cmd/drag",
+      "schema": "cmd-drag",
+      "dir": "web->server",
+      "qos": 1,
+      "retained": false,
+      "scopes": [
+        "cell"
+      ]
+    },
+    {
+      "suffix": "cmd/approve",
+      "schema": "cmd-approve",
+      "dir": "web->server",
+      "qos": 1,
+      "retained": false,
+      "scopes": [
+        "cell"
+      ]
+    },
+    {
+      "suffix": "cmd/confirm",
+      "schema": "cmd-confirm",
+      "dir": "web->server",
+      "qos": 1,
+      "retained": false,
+      "scopes": [
+        "cell"
+      ]
+    },
+    {
+      "suffix": "cmd/estop",
+      "schema": "cmd-estop",
+      "dir": "web->server",
+      "qos": 1,
+      "retained": false,
+      "scopes": [
+        "cell",
+        "site"
+      ]
+    },
+    {
+      "suffix": "cmd/resume",
+      "schema": "cmd-resume",
+      "dir": "web->server",
+      "qos": 1,
+      "retained": false,
+      "scopes": [
+        "cell",
+        "site"
+      ]
+    }
+  ],
+  "operator_topics": [
+    {
+      "suffix": "heartbeat",
+      "schema": "heartbeat",
+      "dir": "web->server",
+      "qos": 0,
+      "retained": false
+    }
   ]
 }

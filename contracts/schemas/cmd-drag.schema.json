@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "cmd-drag",
+  "title": "CmdDrag",
+  "description": "사용자가 멈춘 프레임 위에 그린 경로. 손을 뗄 때 한 번만 보낸다. 서버가 용접선으로 수렴시켜 task/snap으로 답한다. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/drag",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "ts",
+    "cmd_id",
+    "operator",
+    "task_id",
+    "frame_id",
+    "path_px"
+  ],
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "epoch ms"
+    },
+    "cmd_id": {
+      "type": "string",
+      "minLength": 8,
+      "description": "웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다"
+    },
+    "operator": {
+      "type": "string",
+      "minLength": 1,
+      "description": "운영자 id(로그인 전에는 브라우저마다 만든 값)"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "명령 대상 작업(서버가 발급한 task_id)"
+    },
+    "frame_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "그린 프레임(edit_start 뒤 서버가 알린 값)"
+    },
+    "path_px": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "description": "원본 프레임 픽셀 [x, y] 점 배열, 시작 → 끝"
+    }
+  }
+}

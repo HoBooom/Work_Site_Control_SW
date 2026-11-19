@@ -44,6 +44,21 @@ parts.push(
     .join(', ')}];`,
   '',
 );
+parts.push('/** 명령 토픽 접미사(cmd/…) → payload 타입. 웹→서버 */', 'export interface CommandPayloads {');
+for (const t of topics.command_topics) {
+  if (!titles[t.schema]) throw new Error(`topics.json: 스키마 없음 ${t.schema}`);
+  parts.push(`  '${t.suffix}': ${titles[t.schema]};`);
+}
+parts.push('}', '', 'export type CommandSuffix = keyof CommandPayloads;', '');
+parts.push(
+  `export const COMMAND_SUFFIXES: readonly CommandSuffix[] = [${topics.command_topics.map((t) => `'${t.suffix}'`).join(', ')}];`,
+  '/** 사이트 토픽({prefix}/{site}/{suffix})으로도 보낼 수 있는 명령(모든 로봇 대상) */',
+  `export const SITE_COMMAND_SUFFIXES: readonly CommandSuffix[] = [${topics.command_topics
+    .filter((t) => t.scopes.includes('site'))
+    .map((t) => `'${t.suffix}'`)
+    .join(', ')}];`,
+  '',
+);
 const text = parts.join('\n');
 
 if (process.argv.includes('--check')) {

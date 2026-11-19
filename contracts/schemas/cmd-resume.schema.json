@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "cmd-resume",
+  "title": "CmdResume",
+  "description": "긴급정지·일시정지에서 재개. 하던 작업이 있으면 승인 대기로, 없으면 대기로. 셀 토픽이면 그 로봇만, 사이트 토픽이면 모든 로봇. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/resume 또는 innoworks/{site}/cmd/resume",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "ts",
+    "cmd_id",
+    "operator"
+  ],
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "epoch ms"
+    },
+    "cmd_id": {
+      "type": "string",
+      "minLength": 8,
+      "description": "웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다"
+    },
+    "operator": {
+      "type": "string",
+      "minLength": 1,
+      "description": "운영자 id(로그인 전에는 브라우저마다 만든 값)"
+    }
+  }
+}

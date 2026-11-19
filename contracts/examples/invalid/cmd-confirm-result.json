@@ -1,0 +1,12 @@
+{
+  "schema": "cmd-confirm",
+  "why": "확인 결과는 ok, rework 둘 중 하나",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "cmd_id": "c0ffee00-0001",
+    "operator": "op-7f3a",
+    "task_id": "t-0101",
+    "result": "maybe"
+  }
+}

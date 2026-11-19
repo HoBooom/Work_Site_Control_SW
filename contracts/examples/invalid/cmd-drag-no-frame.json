@@ -1,0 +1,21 @@
+{
+  "schema": "cmd-drag",
+  "why": "그린 프레임(frame_id)이 있어야 한다",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "cmd_id": "c0ffee00-0001",
+    "operator": "op-7f3a",
+    "task_id": "t-0101",
+    "path_px": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  }
+}

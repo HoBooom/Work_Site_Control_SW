@@ -5,14 +5,47 @@
   "description": "innoworks/{site}/{cell}/alarm. 서버→웹, QoS 1. 같은 alarm_id로 active=false가 오면 해제.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["v", "ts", "alarm_id", "severity", "code", "message", "active"],
+  "required": [
+    "v",
+    "ts",
+    "alarm_id",
+    "severity",
+    "code",
+    "message",
+    "active"
+  ],
   "properties": {
-    "v": { "const": 1 },
-    "ts": { "type": "integer", "minimum": 0 },
-    "alarm_id": { "type": "string" },
-    "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
-    "code": { "type": "string", "description": "예: CMD_REJECTED, HEARTBEAT_LOST, SCENE_CHANGED" },
-    "message": { "type": "string" },
-    "active": { "type": "boolean" }
+    "v": {
+      "const": 1
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "alarm_id": {
+      "type": "string"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ]
+    },
+    "code": {
+      "type": "string",
+      "description": "예: CMD_REJECTED, HEARTBEAT_LOST, SCENE_CHANGED"
+    },
+    "message": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "cmd_id": {
+      "type": "string",
+      "description": "이 알람을 낸 명령(CMD_REJECTED일 때)"
+    }
   }
 }

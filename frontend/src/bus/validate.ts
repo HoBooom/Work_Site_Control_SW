@@ -29,6 +29,15 @@ export function validatePayload(suffix: CellTopicSuffix | string, payload: unkno
   return `${id}: ${e?.instancePath || '/'} ${e?.message ?? '형식 오류'}`;
 }
 
+/** 명령(cmd/…) payload를 계약으로 검사한다. 보내기 전에 쓴다 */
+const commandSchema = new Map(
+  (topics as unknown as { command_topics: { suffix: string; schema: string }[] }).command_topics.map((t) => [t.suffix, t.schema]),
+);
+export function validateCommand(suffix: string, payload: unknown): string | null {
+  const id = commandSchema.get(suffix);
+  return id ? validateBySchema(id, payload) : `topics.json에 없는 명령: ${suffix}`;
+}
+
 /** 스키마 id로 검사(계약 예시 검사용) */
 export function validateBySchema(id: string, payload: unknown): string | null {
   const v = ajv.getSchema(id);

@@ -9,6 +9,7 @@ import type {
   TaskProposal,
   TaskSnap,
   TaskState,
+  VisionMetrics,
 } from '../contracts/messages.gen';
 
 /** 셀 하나의 "지금 상태". 서버가 보낸 메시지로만 바뀐다. */
@@ -32,6 +33,8 @@ export interface CellState {
   progress: TaskProgress | null;
   /** 활성 알람만. alarm_id → 알람 */
   alarms: Record<string, Alarm>;
+  /** 마지막 비전 메트릭(UI-09) */
+  metrics: VisionMetrics | null;
 }
 
 export interface JointSample {
@@ -64,6 +67,7 @@ function emptyCell(site: string, cell: string): CellState {
     snap: null,
     progress: null,
     alarms: {},
+    metrics: null,
   };
 }
 
@@ -112,6 +116,8 @@ export function reduceCell<S extends keyof CellTopicPayloads>(
     }
     case 'status':
       return { ...prev, online: (payload as CellTopicPayloads['status']).state === 'online' };
+    case 'vision/metrics':
+      return { ...prev, metrics: payload as VisionMetrics };
     default:
       return prev;
   }

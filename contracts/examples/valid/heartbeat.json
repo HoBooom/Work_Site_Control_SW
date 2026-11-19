@@ -1,0 +1,10 @@
+{
+  "schema": "heartbeat",
+  "why": "운영자 화면이 1초마다 보낸다",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "site": "ship-block",
+    "operator": "op-7f3a"
+  }
+}

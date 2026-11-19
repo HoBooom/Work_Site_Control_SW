@@ -25,6 +25,9 @@ const schemaBySuffix = new Map(topics.cell_topics.map((t) => [t.suffix, t.schema
 for (const [suffix, id] of schemaBySuffix) {
   if (!ajv.getSchema(id)) fail('contracts/topics.json', `${suffix}의 스키마 ${id}가 없다`);
 }
+for (const t of [...(topics.command_topics ?? []), ...(topics.operator_topics ?? [])]) {
+  if (!ajv.getSchema(t.schema)) fail('contracts/topics.json', `${t.suffix}의 스키마 ${t.schema}가 없다`);
+}
 const fmt = (errs) => errs.map((e) => `${e.instancePath || '/'} ${e.message}`).join('; ');
 
 // 스키마로 못 거르는 규칙(메시지 하나만 보고 판단). 오류 문자열 배열을 돌려준다

@@ -1,0 +1,11 @@
+{
+  "schema": "vision-metrics",
+  "why": "신뢰도는 0~1",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "latency_ms": 10,
+    "confidence": 1.5,
+    "disturbance": 0
+  }
+}

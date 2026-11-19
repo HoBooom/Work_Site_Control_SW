@@ -1,0 +1,10 @@
+{
+  "schema": "cmd-approve",
+  "why": "운영자 id가 있어야 한다",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "cmd_id": "c0ffee00-0002",
+    "task_id": "t-0101"
+  }
+}

@@ -1,0 +1,67 @@
+/* 관제 화면 배치(frontend/docs/spec.md 2절). 가로: 트윈 | 패널, 아래 알람. 세로(태블릿 세로): 트윈 위, 패널 아래 */
+.app {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 30vw, 400px);
+  grid-template-rows: auto minmax(0, 1fr) clamp(96px, 18vh, 170px);
+  grid-template-areas: 'header header' 'scene panel' 'alarms alarms';
+  font: 13px/1.4 system-ui, -apple-system, sans-serif;
+  color: #1d2228;
+  background: #d9dde2;
+}
+@media (orientation: portrait) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 46vh) minmax(0, 1fr) clamp(96px, 16vh, 170px);
+    grid-template-areas: 'header' 'scene' 'panel' 'alarms';
+  }
+}
+.app-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: #1d2228;
+  color: #eef1f4;
+  min-height: 44px;
+}
+.app-header .muted { color: #a9b2bc; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { padding: 2px 8px; border-radius: 10px; color: white; font-size: 12px; white-space: nowrap; }
+.app-scene { grid-area: scene; position: relative; min-width: 0; min-height: 0; }
+.app-panel { grid-area: panel; overflow-y: auto; background: #f4f6f8; border-left: 1px solid #c9ced4; min-height: 0; }
+@media (orientation: portrait) {
+  .app-panel { border-left: 0; border-top: 1px solid #c9ced4; }
+}
+.app-alarms { grid-area: alarms; overflow-y: auto; background: #ffffff; border-top: 1px solid #c9ced4; min-height: 0; }
+
+/* 버튼: 손가락으로 누를 수 있게 높이 40px 이상 */
+.btn { min-height: 40px; padding: 0 14px; border: 0; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn-estop { background: #d0312d; color: white; min-height: 44px; padding: 0 18px; font-size: 15px; box-shadow: 0 0 0 2px #ffd34e inset; }
+.btn-estop:active { background: #a51f1b; }
+.btn-primary { background: #2f6fde; color: white; }
+.btn-ok { background: #2fa76a; color: white; }
+.btn-warn { background: #d9822b; color: white; }
+.btn-ghost { background: #e3e7ec; color: #1d2228; }
+
+.panel-section { padding: 10px 12px; border-bottom: 1px solid #e1e5ea; }
+.panel-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+.robot-row { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 6px 12px; border: 0; border-bottom: 1px solid #e1e5ea; background: none; font: inherit; text-align: left; cursor: pointer; }
+.robot-row:hover { background: #e9edf2; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.camera { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #2a2f35; border-radius: 6px; overflow: hidden; }
+.camera img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.camera .empty { position: absolute; inset: 0; display: grid; place-items: center; color: #a9b2bc; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.meter { height: 8px; background: #e1e5ea; border-radius: 4px; overflow: hidden; }
+.meter > div { height: 100%; background: #2fa76a; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; color: #4a535c; }
+
+.alarm-row { display: grid; grid-template-columns: 74px 64px 90px 1fr; gap: 8px; align-items: center; width: 100%; min-height: 36px; padding: 4px 12px; border: 0; border-bottom: 1px solid #eef0f3; background: none; font: inherit; text-align: left; cursor: pointer; }
+.alarm-row:hover { background: #f4f6f8; }
+.alarm-empty { padding: 12px; color: #6b747d; }
+.camera canvas { pointer-events: none; }
+.camera-tag { position: absolute; left: 8px; top: 8px; padding: 2px 8px; border-radius: 4px; background: rgba(240, 136, 62, 0.92); color: white; font-size: 12px; font-weight: 600; }
+.hint { font-size: 12px; color: #4a535c; min-height: 16px; }

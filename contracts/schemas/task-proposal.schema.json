@@ -44,6 +44,35 @@
       "type": "number",
       "minimum": 0,
       "maximum": 1
+    },
+    "frame_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "경로를 그린 카메라 프레임(/frames/{frame_id}). 패널이 영상 위에 path_px를 그린다"
+    },
+    "frame_size": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "원본 프레임 [너비, 높이] 픽셀"
+    },
+    "path_px": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "description": "원본 프레임 픽셀 [x, y] 점 배열, 시작 → 끝"
     }
   }
 }

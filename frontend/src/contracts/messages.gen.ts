@@ -15,6 +15,171 @@ export interface Alarm {
   code: string;
   message: string;
   active: boolean;
+  /**
+   * 이 알람을 낸 명령(CMD_REJECTED일 때)
+   */
+  cmd_id?: string;
+}
+
+/**
+ * 지금 제안 경로로 용접 시작. proposed에서만 받는다. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/approve
+ */
+export interface CmdApprove {
+  v: 1;
+  /**
+   * epoch ms
+   */
+  ts: number;
+  /**
+   * 웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다
+   */
+  cmd_id: string;
+  /**
+   * 운영자 id(로그인 전에는 브라우저마다 만든 값)
+   */
+  operator: string;
+  /**
+   * 명령 대상 작업(서버가 발급한 task_id)
+   */
+  task_id: string;
+}
+
+/**
+ * 완료한 용접의 결과 확인. completed에서만 받는다. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/confirm
+ */
+export interface CmdConfirm {
+  v: 1;
+  /**
+   * epoch ms
+   */
+  ts: number;
+  /**
+   * 웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다
+   */
+  cmd_id: string;
+  /**
+   * 운영자 id(로그인 전에는 브라우저마다 만든 값)
+   */
+  operator: string;
+  /**
+   * 명령 대상 작업(서버가 발급한 task_id)
+   */
+  task_id: string;
+  /**
+   * ok 합격, rework 재작업(같은 자리를 다시 제안)
+   */
+  result: 'ok' | 'rework';
+}
+
+/**
+ * 사용자가 멈춘 프레임 위에 그린 경로. 손을 뗄 때 한 번만 보낸다. 서버가 용접선으로 수렴시켜 task/snap으로 답한다. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/drag
+ */
+export interface CmdDrag {
+  v: 1;
+  /**
+   * epoch ms
+   */
+  ts: number;
+  /**
+   * 웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다
+   */
+  cmd_id: string;
+  /**
+   * 운영자 id(로그인 전에는 브라우저마다 만든 값)
+   */
+  operator: string;
+  /**
+   * 명령 대상 작업(서버가 발급한 task_id)
+   */
+  task_id: string;
+  /**
+   * 그린 프레임(edit_start 뒤 서버가 알린 값)
+   */
+  frame_id: string;
+  /**
+   * 원본 프레임 픽셀 [x, y] 점 배열, 시작 → 끝
+   *
+   * @minItems 2
+   */
+  path_px: [[number, number], [number, number], ...[number, number][]];
+}
+
+/**
+ * 수정 시작. proposed에서만 받는다. 서버가 지금 프레임을 멈추고 frame_id를 task/proposal로 알린다. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/edit_start
+ */
+export interface CmdEditStart {
+  v: 1;
+  /**
+   * epoch ms
+   */
+  ts: number;
+  /**
+   * 웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다
+   */
+  cmd_id: string;
+  /**
+   * 운영자 id(로그인 전에는 브라우저마다 만든 값)
+   */
+  operator: string;
+  /**
+   * 명령 대상 작업(서버가 발급한 task_id)
+   */
+  task_id: string;
+}
+
+/**
+ * 긴급정지. 아무 상태에서나 받는다. 셀 토픽이면 그 로봇만, 사이트 토픽이면 모든 로봇. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/estop 또는 innoworks/{site}/cmd/estop
+ */
+export interface CmdEstop {
+  v: 1;
+  /**
+   * epoch ms
+   */
+  ts: number;
+  /**
+   * 웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다
+   */
+  cmd_id: string;
+  /**
+   * 운영자 id(로그인 전에는 브라우저마다 만든 값)
+   */
+  operator: string;
+  /**
+   * 사람이 적은 이유(선택)
+   */
+  reason?: string;
+}
+
+/**
+ * 긴급정지·일시정지에서 재개. 하던 작업이 있으면 승인 대기로, 없으면 대기로. 셀 토픽이면 그 로봇만, 사이트 토픽이면 모든 로봇. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/resume 또는 innoworks/{site}/cmd/resume
+ */
+export interface CmdResume {
+  v: 1;
+  /**
+   * epoch ms
+   */
+  ts: number;
+  /**
+   * 웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다
+   */
+  cmd_id: string;
+  /**
+   * 운영자 id(로그인 전에는 브라우저마다 만든 값)
+   */
+  operator: string;
+}
+
+/**
+ * innoworks/operator/{client_id}/heartbeat. 웹→서버, QoS 0, 1초마다. 3초 넘게 없으면 서버가 실행 중 로봇을 일시정지한다.
+ */
+export interface Heartbeat {
+  v: 1;
+  ts: number;
+  /**
+   * 보고 있는 사이트
+   */
+  site: string;
+  operator: string;
 }
 
 /**
@@ -260,6 +425,23 @@ export interface TaskProposal {
    */
   path: [[number, number], [number, number], ...[number, number][]];
   confidence?: number;
+  /**
+   * 경로를 그린 카메라 프레임(/frames/{frame_id}). 패널이 영상 위에 path_px를 그린다
+   */
+  frame_id?: string;
+  /**
+   * 원본 프레임 [너비, 높이] 픽셀
+   *
+   * @minItems 2
+   * @maxItems 2
+   */
+  frame_size?: [number, number];
+  /**
+   * 원본 프레임 픽셀 [x, y] 점 배열, 시작 → 끝
+   *
+   * @minItems 2
+   */
+  path_px?: [[number, number], [number, number], ...[number, number][]];
 }
 
 /**
@@ -283,6 +465,23 @@ export interface TaskSnap {
    * @minItems 2
    */
   path: [[number, number], [number, number], ...[number, number][]];
+  /**
+   * 경로를 그린 카메라 프레임(/frames/{frame_id}). 패널이 영상 위에 path_px를 그린다
+   */
+  frame_id?: string;
+  /**
+   * 원본 프레임 [너비, 높이] 픽셀
+   *
+   * @minItems 2
+   * @maxItems 2
+   */
+  frame_size?: [number, number];
+  /**
+   * 원본 프레임 픽셀 [x, y] 점 배열, 시작 → 끝
+   *
+   * @minItems 2
+   */
+  path_px?: [[number, number], [number, number], ...[number, number][]];
 }
 
 /**
@@ -301,6 +500,26 @@ export interface TaskState {
   task_id: string | null;
 }
 
+/**
+ * innoworks/{site}/{cell}/vision/metrics. 서버→웹, QoS 0, 1초마다.
+ */
+export interface VisionMetrics {
+  v: 1;
+  ts: number;
+  /**
+   * 추론 지연(ms)
+   */
+  latency_ms: number;
+  /**
+   * 지금 제안 경로의 신뢰도
+   */
+  confidence: number;
+  /**
+   * 외란(조명·연기·장면 변화) 강도
+   */
+  disturbance: number;
+}
+
 export const TOPIC_PREFIX = 'innoworks';
 
 /** 셀 토픽 접미사 → payload 타입 */
@@ -312,8 +531,25 @@ export interface CellTopicPayloads {
   'task/progress': TaskProgress;
   'alarm': Alarm;
   'status': Status;
+  'vision/metrics': VisionMetrics;
 }
 
 export type CellTopicSuffix = keyof CellTopicPayloads;
 
-export const CELL_TOPIC_SUFFIXES: readonly CellTopicSuffix[] = ['robot/state', 'task/state', 'task/proposal', 'task/snap', 'task/progress', 'alarm', 'status'];
+export const CELL_TOPIC_SUFFIXES: readonly CellTopicSuffix[] = ['robot/state', 'task/state', 'task/proposal', 'task/snap', 'task/progress', 'alarm', 'status', 'vision/metrics'];
+
+/** 명령 토픽 접미사(cmd/…) → payload 타입. 웹→서버 */
+export interface CommandPayloads {
+  'cmd/edit_start': CmdEditStart;
+  'cmd/drag': CmdDrag;
+  'cmd/approve': CmdApprove;
+  'cmd/confirm': CmdConfirm;
+  'cmd/estop': CmdEstop;
+  'cmd/resume': CmdResume;
+}
+
+export type CommandSuffix = keyof CommandPayloads;
+
+export const COMMAND_SUFFIXES: readonly CommandSuffix[] = ['cmd/edit_start', 'cmd/drag', 'cmd/approve', 'cmd/confirm', 'cmd/estop', 'cmd/resume'];
+/** 사이트 토픽({prefix}/{site}/{suffix})으로도 보낼 수 있는 명령(모든 로봇 대상) */
+export const SITE_COMMAND_SUFFIXES: readonly CommandSuffix[] = ['cmd/estop', 'cmd/resume'];

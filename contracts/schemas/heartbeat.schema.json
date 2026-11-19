@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "heartbeat",
+  "title": "Heartbeat",
+  "description": "innoworks/operator/{client_id}/heartbeat. 웹→서버, QoS 0, 1초마다. 3초 넘게 없으면 서버가 실행 중 로봇을 일시정지한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "ts",
+    "site",
+    "operator"
+  ],
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "site": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "보고 있는 사이트"
+    },
+    "operator": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

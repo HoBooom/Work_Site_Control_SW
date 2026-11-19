@@ -47,15 +47,17 @@ docs/           adr/ (구획을 넘는 설계 결정만)
 
 ```
 npm install                                   # 저장소 루트에서 한 번
-npm run dev                                   # infra/dev.sh: MQTT 브로커(aedes, 1883/9001) + 프론트
-npm run dev -- ship-block-weld                # 위에 더해 픽스처를 브로커로 반복 재생(서버 대신)
+npm run dev                                   # infra/dev.sh: 브로커(aedes, 1883/9001) + Mock 서버(명령에 답한다) + 프론트
+npm run dev -- play ship-block-weld           # Mock 서버 대신 픽스처를 반복 재생
 npm run play -- <픽스처> [--speed 2]           # 픽스처 한 번 재생(브로커가 떠 있어야 한다)
 npm run dev -w frontend                       # 프론트만(픽스처 트윈 랩)
 digital-twin/harness/check.sh                 # 트윈 검사 L0~L4 (/twin-check)
 digital-twin/harness/shot.sh "<랩 주소 인자>"   # 장면 한 장 (/twin-shot)
 ```
 
-화면: 관제 `http://localhost:5173/?site=ship-block`(브로커), 트윈 랩 `/lab`(픽스처) 또는 `/lab?site=ship-block&source=mqtt`(브로커), 로봇 랩 `/lab/robot`.
+프론트(서버 전): 기능명세 `frontend/docs/spec.md`, F0·F1 완료(ADR 0005). 다음은 F2 수정 모드.
+
+화면: 관제 `http://localhost:5173/?site=ship-block`(브로커·Mock 서버), 트윈 랩 `/lab`(픽스처) 또는 `/lab?site=ship-block&source=mqtt`(브로커), 로봇 랩 `/lab/robot`.
 
 나중에 생길 명령:
 

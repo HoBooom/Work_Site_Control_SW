@@ -1,0 +1,11 @@
+{
+  "schema": "vision-metrics",
+  "why": "추론 지연·신뢰도·외란",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "latency_ms": 84.5,
+    "confidence": 0.91,
+    "disturbance": 0.12
+  }
+}

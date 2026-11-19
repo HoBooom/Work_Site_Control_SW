@@ -27,6 +27,7 @@ const cell = (over: Partial<CellState> = {}): CellState => ({
   snap: null,
   progress: null,
   alarms: {},
+  metrics: null,
   ...over,
 });
 const task = (state: NonNullable<CellState['task']>['state']) => ({ v: 1 as const, ts: 0, state, task_id: 't' });

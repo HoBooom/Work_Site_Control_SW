@@ -1,0 +1,11 @@
+{
+  "schema": "cmd-estop",
+  "why": "사이트 전체 긴급정지(task_id 없음)",
+  "payload": {
+    "v": 1,
+    "ts": 1767225600000,
+    "cmd_id": "c0ffee00-0001",
+    "operator": "op-7f3a",
+    "reason": "작업자 진입"
+  }
+}

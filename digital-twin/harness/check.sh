@@ -89,6 +89,7 @@ fi
 
 # L2 단위
 [ "$LEVEL" -ge 2 ] && step L2 "단위 테스트" npx vitest run --root frontend
+[ "$LEVEL" -ge 2 ] && step L2 "Mock 상태 머신" node --test tools/
 
 # L3 씬 상태, L4 스크린샷
 [ "$LEVEL" -ge 3 ] && step L3 "씬 상태" pw L3 --grep @L3
