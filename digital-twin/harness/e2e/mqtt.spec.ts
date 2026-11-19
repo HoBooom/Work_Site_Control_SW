@@ -127,7 +127,8 @@ test.describe('MQTT 브로커 @L3', () => {
     await page.goto(`/?site=${SITE}&broker=ws://localhost:${broker.wsPort}`);
     await expect(page.getByTestId('bus-state')).toHaveAttribute('data-state', 'connected');
     const p = await playFixture(readFixture('ship-block-basic'), { url: tcpUrl(), instant: true, until: 4000, keepTs: true });
-    await expect(page.getByTestId('bus-state').locator('xpath=..')).toContainText(`받은 메시지 ${p.sent}`);
+    // 받은 메시지 수는 연결 배지의 툴팁(title)에 있다(디자인 v3, ADR 0006)
+    await expect(page.getByTestId('bus-state')).toHaveAttribute('title', new RegExp(`받은 메시지 ${p.sent}(\\D|$)`));
     await expect(page.locator('canvas')).toBeVisible();
     await expect(page.getByTestId(`cell-label-${SITE}-spider-1`)).toContainText('실행 중');
     await p.end();

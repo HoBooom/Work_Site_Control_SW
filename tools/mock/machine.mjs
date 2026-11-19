@@ -121,6 +121,7 @@ export function command(u, name, payload, now) {
       const out = [stateMsg(u)];
       if (u.state === 'proposed') out.push(proposalMsg(u));
       if (wasEstop) out.push(alarm(u, 'critical', 'ESTOP', '긴급정지 해제', false, { alarm_id: `${u.cell}-estop` }));
+      else out.push(alarm(u, 'warning', 'HEARTBEAT_LOST', '일시정지 해제', false, { alarm_id: `${u.cell}-heartbeat` }));
       return { accepted: true, out };
     }
     default:
@@ -133,7 +134,7 @@ export function pause(u, why) {
   if (u.state !== 'running') return [];
   u.state = 'paused';
   u.resumeTo = 'proposed';
-  return [stateMsg(u), alarm(u, 'warning', 'HEARTBEAT_LOST', why)];
+  return [stateMsg(u), alarm(u, 'warning', 'HEARTBEAT_LOST', why, true, { alarm_id: `${u.cell}-heartbeat` })];
 }
 
 /** 시간 진행: 실행 중이면 진행률을 올리고 끝나면 completed */

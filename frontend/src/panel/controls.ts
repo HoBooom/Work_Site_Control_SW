@@ -17,10 +17,10 @@ export function controlsFor(state: CellVisualState, pending: boolean, connected:
   const out: Control[] = [];
   switch (state) {
     case 'proposed':
-      out.push({ id: 'edit', label: '수정', enabled: can(true) }, { id: 'approve', label: '승인', enabled: can(true) });
+      out.push({ id: 'edit', label: '수정', enabled: can(true) }, { id: 'approve', label: '승인하고 용접 시작', enabled: can(true) });
       break;
     case 'completed':
-      out.push({ id: 'confirm-ok', label: '합격', enabled: can(true) }, { id: 'confirm-rework', label: '재작업', enabled: can(true) });
+      out.push({ id: 'confirm-rework', label: '재작업', enabled: can(true) }, { id: 'confirm-ok', label: '합격', enabled: can(true) });
       break;
     case 'estopped':
     case 'paused':
@@ -37,7 +37,7 @@ export function controlsFor(state: CellVisualState, pending: boolean, connected:
 export const HINT: Partial<Record<CellVisualState, string>> = {
   idle: 'AI 경로 제안을 기다리는 중',
   proposed: '제안 경로를 확인하고 승인하거나 수정한다',
-  editing: '수정 중: 멈춘 영상 위에 용접선을 따라 다시 그린다. 손을 떼면 서버가 용접선에 맞춘다',
+  editing: '영상 위에 용접선을 따라 다시 그린다. 손을 떼면 서버가 용접선에 맞춘다',
   running: '용접 중',
   completed: '용접이 끝났다. 결과를 확인한다',
   paused: '일시정지됨. 확인 뒤 재개한다',

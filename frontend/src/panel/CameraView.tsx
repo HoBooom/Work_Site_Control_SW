@@ -167,7 +167,7 @@ export function CameraView({ site, cellId, name, onDraw, drawPending }: { site: 
           setStroke(null);
         }}
       />
-      {state === 'editing' && <div className="camera-tag">멈춘 영상 · 용접선을 따라 그린다</div>}
+      <div className="camera-tag">{state === 'editing' ? '프레임 정지 · 여기에 그리기' : '카메라 · 제안 경로'}</div>
     </div>
   );
 }

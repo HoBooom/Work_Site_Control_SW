@@ -33,7 +33,7 @@ describe('UI-04 버튼 활성화 표', () => {
     expect(ids('proposed')).toEqual(['edit', 'approve', 'estop']);
     expect(ids('editing')).toEqual(['estop']);
     expect(ids('running')).toEqual(['estop']);
-    expect(ids('completed')).toEqual(['confirm-ok', 'confirm-rework', 'estop']);
+    expect(ids('completed')).toEqual(['confirm-rework', 'confirm-ok', 'estop']);
     expect(ids('paused')).toEqual(['resume', 'estop']);
     expect(ids('estopped')).toEqual(['resume']);
     expect(ids('offline')).toEqual([]);

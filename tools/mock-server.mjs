@@ -95,7 +95,14 @@ export async function startMockServer(opts = {}) {
   const clients = new Map();
   for (const cell of units.keys()) {
     const will = { topic: `${P}/${site}/${cell}/status`, payload: JSON.stringify({ v: 1, ts: Date.now(), state: 'offline' }), qos: 1, retain: true };
-    clients.set(cell, await connect(url, { clientId: `mock-server-${site}-${cell}-${instance}`, will }));
+    const c = await connect(url, { clientId: `mock-server-${site}-${cell}-${instance}`, will });
+    clients.set(cell, c);
+    // 브로커가 다시 떴으면(retained가 비었을 수 있다) 지금 상태를 다시 보낸다
+    c.on('connect', () => {
+      if (stopped) return;
+      send(cell, { suffix: 'status', payload: { state: 'online' } });
+      sendAll(cell, snapshot(units.get(cell)));
+    });
   }
   const control = await connect(url, { clientId: `mock-server-${site}-control-${instance}` });
 
@@ -153,6 +160,7 @@ export async function startMockServer(opts = {}) {
   // 명령
   await new Promise((r) => control.subscribe([`${P}/${site}/+/cmd/#`, `${P}/${site}/cmd/#`, `${P}/operator/+/heartbeat`], { qos: 1 }, () => r()));
   control.on('message', (topic, buf) => {
+    if (stopped) return;
     let payload;
     try {
       payload = JSON.parse(buf.toString());
@@ -217,6 +225,10 @@ export async function startMockServer(opts = {}) {
       clearInterval(metricsTimer);
       http.closeAllConnections();
       await new Promise((r) => http.close(() => r()));
+      // 정상 종료도 오프라인으로 알린다(유언은 비정상 종료에만 나간다)
+      await Promise.all(
+        [...clients].map(([cell, c]) => new Promise((r) => c.publish(`${P}/${site}/${cell}/status`, JSON.stringify({ v: 1, ts: Date.now(), state: 'offline' }), { qos: 1, retain: true }, () => r()))),
+      );
       await Promise.all([...clients.values(), control].map((c) => new Promise((r) => c.end(false, {}, () => r()))));
     },
     /** 비정상 종료(브로커가 유언을 보낸다) */
@@ -226,8 +238,11 @@ export async function startMockServer(opts = {}) {
       clearInterval(metricsTimer);
       http.closeAllConnections();
       http.close();
-      for (const c of clients.values()) c.stream.destroy();
-      control.stream.destroy();
+      // 다시 붙지 않게 한 뒤 연결만 끊는다(DISCONNECT 없이 → 브로커가 유언을 보낸다)
+      for (const c of [...clients.values(), control]) {
+        c.options.reconnectPeriod = 0;
+        c.stream.destroy();
+      }
     },
   };
 }

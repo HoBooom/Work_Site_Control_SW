@@ -40,22 +40,22 @@ test.describe('관제 화면 @L3', () => {
     ['태블릿 가로', { width: 1180, height: 820 }],
     ['태블릿 세로', { width: 820, height: 1180 }],
   ] as const) {
-    test(`UI-01 ${label}: 머리·트윈·패널·알람이 화면 안에 겹치지 않고, 전체 긴급정지가 보인다`, async ({ page }) => {
+    test(`UI-01 ${label}: 상태 줄·패널·트윈·하단 독이 화면 안에 겹치지 않고, 알람은 트윈 위, 전체 긴급정지가 보인다`, async ({ page }) => {
       await page.setViewportSize(size);
       const app = await openApp(page);
       const boxes = await Promise.all(
-        ['app-scene', 'app-panel', 'app-alarms'].map(async (id) => [id, (await page.getByTestId(id).boundingBox())!] as const),
+        ['app-panel', 'app-scene', 'app-dock'].map(async (id) => [id, (await page.getByTestId(id).boundingBox())!] as const),
       );
       const header = (await page.locator('.app-header').boundingBox())!;
-      for (const [id, b] of [['header', header] as const, ...boxes]) {
+      const all = [['header', header] as const, ...boxes];
+      for (const [id, b] of all) {
         expect(b.width, `${id} 폭`).toBeGreaterThan(100);
-        expect(b.height, `${id} 높이`).toBeGreaterThan(40);
+        expect(b.height, `${id} 높이`).toBeGreaterThan(36);
         expect(b.x).toBeGreaterThanOrEqual(0);
         expect(b.y).toBeGreaterThanOrEqual(0);
         expect(b.x + b.width, `${id} 오른쪽`).toBeLessThanOrEqual(size.width + 0.5);
         expect(b.y + b.height, `${id} 아래`).toBeLessThanOrEqual(size.height + 0.5);
       }
-      const all = [['header', header] as const, ...boxes];
       for (let i = 0; i < all.length; i++)
         for (let j = i + 1; j < all.length; j++) {
           const [a, A] = all[i];
@@ -63,6 +63,13 @@ test.describe('관제 화면 @L3', () => {
           const overlap = Math.max(0, Math.min(A.x + A.width, B.x + B.width) - Math.max(A.x, B.x)) * Math.max(0, Math.min(A.y + A.height, B.y + B.height) - Math.max(A.y, B.y));
           expect(overlap, `${a}와 ${b}가 겹친다`).toBeLessThan(1);
         }
+      // 알람 카드는 트윈 안에 뜬다
+      const scene = boxes[1][1];
+      const alarms = (await page.getByTestId('app-alarms').boundingBox())!;
+      expect(alarms.x).toBeGreaterThanOrEqual(scene.x);
+      expect(alarms.y).toBeGreaterThanOrEqual(scene.y);
+      expect(alarms.x + alarms.width).toBeLessThanOrEqual(scene.x + scene.width + 0.5);
+      expect(alarms.y + alarms.height).toBeLessThanOrEqual(scene.y + scene.height + 0.5);
       const estop = (await page.getByTestId('btn-estop-all').boundingBox())!;
       expect(estop.x + estop.width, '전체 긴급정지가 화면 안').toBeLessThanOrEqual(size.width);
       expect(estop.height, '손가락으로 누를 크기').toBeGreaterThanOrEqual(44);
@@ -118,6 +125,71 @@ test.describe('관제 화면 @L3', () => {
     await page.getByRole('button', { name: '로봇 목록으로' }).click();
     await page.getByTestId('alarm-row-spider-2-estop').click();
     await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-cell', 'spider-2');
+    app.expectClean();
+  });
+
+  test('UI-10: 화면의 heartbeat가 끊기면 실행 중인 로봇이 일시정지(HEARTBEAT_LOST)되고, 재개하면 승인 대기로 알람이 풀린다', async ({ page }) => {
+    // 실행이 끝나기 전에 끊김을 알아채게 실행은 길게, 끊김 판정은 짧게
+    await mock.close();
+    mock = await startMockServer({ site: SITE, url: `mqtt://localhost:${broker.tcpPort}`, httpPort: 0, proposeMs: 300, runMs: 30000, heartbeatTimeoutMs: 1500 });
+    const app = await openApp(page);
+    await expect(rowState(page, 'spider-1')).toHaveAttribute('data-state', 'proposed');
+    await rowState(page, 'spider-1').click();
+    await page.getByTestId('btn-approve').click();
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'running');
+    // 서버는 heartbeat를 한 번이라도 받은 뒤에만 끊김을 판정한다: 한 번 오는 것을 보고 끊는다
+    const hb = mqtt.connect(`mqtt://localhost:${broker.tcpPort}`);
+    await new Promise<void>((r) => hb.on('connect', () => hb.subscribe('innoworks/operator/+/heartbeat', () => r())));
+    await new Promise<void>((r) => hb.once('message', () => r()));
+    hb.end();
+    await page.evaluate(() => window.__app!.setHeartbeat(false));
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'paused');
+    await expect(page.getByTestId('alarm-row-spider-1-heartbeat')).toBeVisible();
+    await expect(rowState(page, 'spider-2'), '실행 중이 아니던 로봇은 그대로').toHaveAttribute('data-state', 'proposed');
+    await page.evaluate(() => window.__app!.setHeartbeat(true));
+    await page.getByTestId('btn-resume').click();
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'proposed');
+    await expect(page.getByTestId('alarm-row-spider-1-heartbeat')).toHaveCount(0);
+    app.expectClean();
+  });
+
+  test('UI-08: 브로커가 끊기면 안내 띠와 회색 트윈, 다시 붙으면 사라지고 서버가 상태를 다시 보낸다', async ({ page, browser }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await openApp(page);
+    for (const cell of CELLS) await expect(rowState(page, cell)).toHaveAttribute('data-state', 'proposed');
+    await expect(page.getByTestId('bus-banner')).toHaveCount(0);
+    const { tcpPort, wsPort } = broker;
+    await broker.close();
+    await expect(page.getByTestId('bus-state')).not.toHaveAttribute('data-state', 'connected');
+    await expect(page.getByTestId('bus-banner')).toBeVisible();
+    await expect(page.getByTestId('app-scene')).toHaveAttribute('data-lost', '1');
+    for (const cell of CELLS) await expect(rowState(page, cell), '마지막 상태를 그대로 보인다').toHaveAttribute('data-state', 'proposed');
+    broker = await startBroker({ tcpPort, wsPort }); // 새 브로커(retained 없음)
+    await expect(page.getByTestId('bus-state')).toHaveAttribute('data-state', 'connected', { timeout: 15000 });
+    await expect(page.getByTestId('bus-banner')).toHaveCount(0);
+    await expect(page.getByTestId('app-scene')).toHaveAttribute('data-lost', '0');
+    // 새로 연 화면도 상태를 받는다: Mock 서버가 다시 붙으며 상태를 다시 보냈다
+    const fresh = await browser.newPage();
+    await openApp(fresh);
+    for (const cell of CELLS) await expect(rowState(fresh, cell), `${cell} 새 화면`).toHaveAttribute('data-state', 'proposed');
+    await fresh.close();
+    expect(errors).toEqual([]);
+  });
+
+  test('UI-08: 로봇 서버가 비정상 종료하면 오프라인(유언)으로 보이고 버튼이 막힌다. 서버가 돌아오면 복구', async ({ page }) => {
+    const app = await openApp(page);
+    await expect(rowState(page, 'spider-1')).toHaveAttribute('data-state', 'proposed');
+    await rowState(page, 'spider-1').click();
+    await expect(page.getByTestId('btn-approve')).toBeEnabled();
+    mock.kill();
+    for (const cell of CELLS) await expect(rowState(page, cell)).toHaveAttribute('data-state', 'offline');
+    await expect(page.getByTestId('unit-hint')).toContainText('서버와 연결이 끊겼다');
+    await expect(page.getByTestId('btn-approve')).toHaveCount(0);
+    await expect(page.getByTestId('bus-banner')).toContainText('로봇 서버');
+    mock = await startMockServer({ site: SITE, url: `mqtt://localhost:${broker.tcpPort}`, httpPort: 0, proposeMs: 300, runMs: 2000 });
+    await expect(rowState(page, 'spider-1')).not.toHaveAttribute('data-state', 'offline');
+    await expect(page.getByTestId('bus-banner')).toHaveCount(0);
     app.expectClean();
   });
 

@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { SRGBColorSpace } from 'three';
 import type { SiteConfig } from '../contracts/messages.gen';
 import { TwinScene } from '../scene/TwinScene';
-import { listSites, loadSiteConfig } from '../scene/site-configs';
+import { defaultSite, loadSiteConfig } from '../scene/site-configs';
 import { QUALITY, detectQuality } from '../scene/quality';
 import { useSelection } from '../scene/selection';
 import { TwinTimeContext } from '../scene/time';
@@ -40,7 +40,7 @@ function checkPreset(config: SiteConfig, preset: string) {
 
 async function load(search: string): Promise<Loaded> {
   const params = parseLabParams(search);
-  const site = params.site ?? listSites()[0];
+  const site = params.site ?? defaultSite();
   if (!site) throw new Error('site-config가 하나도 없다');
   if (params.source === 'mqtt') {
     // M5: 상태는 브로커에서 온다. 픽스처를 읽지 않는다

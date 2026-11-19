@@ -13,6 +13,15 @@ export function listSites(): string[] {
   return [...byName.keys()].sort();
 }
 
+/**
+ * 주소에 site가 없을 때 여는 사이트. VITE_DEFAULT_SITE(frontend/.env, infra/dev.sh가 Mock 서버 사이트로 덮어쓴다).
+ * 없거나 모르는 이름이면 이름순 첫 번째
+ */
+export function defaultSite(): string | undefined {
+  const want = import.meta.env.VITE_DEFAULT_SITE as string | undefined;
+  return want && byName.has(want) ? want : listSites()[0];
+}
+
 export async function loadSiteConfig(site: string): Promise<SiteConfig> {
   const load = byName.get(site);
   if (!load) throw new Error(`site-config 없음: ${site} (있는 것: ${listSites().join(', ') || '없음'})`);

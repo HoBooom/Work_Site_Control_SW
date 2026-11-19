@@ -21,6 +21,8 @@ case "$mode" in
   play) node tools/play.mjs "$arg" --loop & pids+=($!) ;;
   *) echo "모르는 모드: $mode (mock 또는 play)" >&2; exit 2 ;;
 esac
+# 관제 화면 기본 사이트를 Mock 서버 사이트와 맞춘다(재생 모드는 frontend/.env 기본값)
+if [ "$mode" = mock ]; then export VITE_DEFAULT_SITE="$arg"; fi
 npm run dev -w frontend &
 pids+=($!)
 wait

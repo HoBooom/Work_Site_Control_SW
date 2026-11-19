@@ -127,8 +127,11 @@ describe('작업 상태 머신 @L2', () => {
     const out = pause(u, '운영자 화면 응답 없음');
     assertContract(out);
     assert.equal(u.state, 'paused');
-    command(u, 'resume', { ...op }, 1);
+    assert.ok(out.some((m) => m.suffix === 'alarm' && m.payload.code === 'HEARTBEAT_LOST' && m.payload.active && m.payload.alarm_id === `${u.cell}-heartbeat`));
+    const r = command(u, 'resume', { ...op }, 1);
     assert.equal(u.state, 'proposed');
+    assertContract(r.out);
+    assert.ok(r.out.some((m) => m.suffix === 'alarm' && m.payload.alarm_id === `${u.cell}-heartbeat` && m.payload.active === false), '재개하면 heartbeat 알람을 해제한다');
   });
 
   it('허용되지 않은 명령은 거부 알람(cmd_id)을 내고 상태를 바꾸지 않는다', () => {
