@@ -5,6 +5,8 @@
 
 ## 구획과 문서
 
+전체 문서: `docs/overview.md`(개요), `docs/usage.md`(사용법), `docs/architecture.md`(아키텍처 위키). 실행·구조·상태가 바뀌면 이 셋도 맞춰 고친다.
+
 작업 전에 해당 구획의 `docs/README.md`를 먼저 읽는다. 문서는 각 구획 폴더 안의 `docs/`에 둔다. 구획을 넘는 변경은 contracts부터 고친다.
 
 개발 순서: 디지털 트윈이 먼저다. 기능명세는 `digital-twin/docs/spec.md`, 검증 방법은 `digital-twin/docs/harness.md`.
@@ -46,6 +48,8 @@ docs/           adr/ (구획을 넘는 설계 결정만)
 디지털 트윈 M0~M5 완료(ADR 0003 이동 로봇, ADR 0004 MQTT). 지금 동작하는 명령:
 
 ```
+./init.sh                                     # 한 번에: 도구 점검 + 의존성 설치(필요할 때만) + 포트 점검 + 아래 npm run dev
+./init.sh --check                             # 점검만. 인자는 infra/dev.sh와 같다(./init.sh mock, LAN=1 ./init.sh …)
 npm install                                   # 저장소 루트에서 한 번
 uv sync --project server                      # 서버 가상환경(server/.venv) 한 번
 npm run dev                                   # infra/dev.sh: 브로커(aedes, 1883/9001) + 관제 서버(server/, Mock 어댑터) + 프론트
