@@ -12,7 +12,9 @@
     "dev": "infra/dev.sh",
     "broker": "node infra/broker.mjs",
     "play": "node tools/play.mjs",
-    "mock": "node tools/mock-server.mjs"
+    "mock": "node tools/mock-server.mjs",
+    "server": "cd server && .venv/bin/python -m app",
+    "test:server": "cd server && .venv/bin/python -m pytest -q"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

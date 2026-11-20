@@ -101,6 +101,22 @@ describe('작업 상태 머신 @L2', () => {
     assert.ok(p.path_px[0][0] > 290 && p.path_px[8][0] < 710, '그린 구간만');
   });
 
+  it('수정 취소: 그린 선을 버리고 수정 전 제안으로 돌아간다. 수렴 실패 알람도 풀린다', () => {
+    const u = proposed();
+    const before = structuredClone(u.proposal);
+    command(u, 'edit_start', { ...op, task_id: u.taskId }, 0);
+    let r = command(u, 'drag', { ...op, task_id: u.taskId, frame_id: u.frameId, path_px: [[100, 450], [900, 450]] }, 1);
+    const failed = r.out.find((m) => m.suffix === 'alarm');
+    assert.equal(failed.payload.alarm_id, `${u.cell}-snap`);
+    r = command(u, 'edit_cancel', { ...op, task_id: u.taskId }, 2);
+    assertContract(r.out);
+    assert.equal(u.state, 'proposed');
+    assert.deepEqual(r.out.find((m) => m.suffix === 'task/proposal').payload.path_px, before.path_px, '수정 전 경로 그대로');
+    assert.ok(r.out.some((m) => m.suffix === 'alarm' && m.payload.alarm_id === `${u.cell}-snap` && m.payload.active === false));
+    assert.ok(rejected(command(u, 'edit_cancel', { ...op, task_id: u.taskId }, 3)), '수정 중이 아니면 거부');
+    assert.ok(rejected(command(u, 'edit_cancel', { ...op, task_id: 't-old' }, 3)), '지난 작업은 거부');
+  });
+
   it('긴급정지는 아무 상태에서나, 재개하면 하던 작업은 승인 대기로·없으면 대기로', () => {
     for (const setup of ['idle', 'proposed', 'editing', 'running', 'completed']) {
       const u = createUnit({ cell: 'spider-1', frame });
@@ -137,9 +153,9 @@ describe('작업 상태 머신 @L2', () => {
   it('허용되지 않은 명령은 거부 알람(cmd_id)을 내고 상태를 바꾸지 않는다', () => {
     const cases = [
       ['idle', 'approve'], ['idle', 'edit_start'], ['idle', 'confirm'], ['idle', 'resume'],
-      ['proposed', 'drag'], ['proposed', 'confirm'], ['proposed', 'resume'],
+      ['proposed', 'drag'], ['proposed', 'confirm'], ['proposed', 'resume'], ['proposed', 'edit_cancel'],
       ['editing', 'approve'], ['editing', 'confirm'],
-      ['running', 'approve'], ['running', 'edit_start'], ['running', 'confirm'],
+      ['running', 'approve'], ['running', 'edit_start'], ['running', 'confirm'], ['running', 'edit_cancel'],
       ['completed', 'approve'], ['completed', 'edit_start'],
     ];
     for (const [setup, cmd] of cases) {

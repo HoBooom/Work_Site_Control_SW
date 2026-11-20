@@ -47,6 +47,9 @@ const alarm = (u, severity, code, message, active = true, extra = {}) => ({
   payload: { alarm_id: extra.alarm_id ?? `${u.cell}-${code.toLowerCase()}-${++u.alarmSeq}`, severity, code, message, active, ...(extra.cmd_id ? { cmd_id: extra.cmd_id } : {}) },
 });
 
+/** 수정 모드를 나가면 수렴 실패 알람을 푼다(없었으면 받는 쪽에서 무시한다) */
+const snapCleared = (u) => alarm(u, 'info', 'SNAP_FAILED', '수정 끝', false, { alarm_id: `${u.cell}-snap` });
+
 function newFrame(u) {
   u.frameId = `f-${u.cell}-${String(++u.frameSeq).padStart(5, '0')}`;
 }
@@ -69,7 +72,7 @@ const reject = (u, cmd, payload, why) => ({
 
 /** 명령 하나. 받아들이면 상태를 바꾸고 보낼 메시지를, 아니면 거부 알람을 돌려준다 */
 export function command(u, name, payload, now) {
-  const needTask = ['edit_start', 'drag', 'approve', 'confirm'].includes(name);
+  const needTask = ['edit_start', 'edit_cancel', 'drag', 'approve', 'confirm'].includes(name);
   if (needTask && payload.task_id !== u.taskId) return reject(u, name, payload, `지금 작업(${u.taskId ?? '없음'})이 아니다`);
   switch (name) {
     case 'edit_start': {
@@ -83,10 +86,16 @@ export function command(u, name, payload, now) {
       if (payload.frame_id !== u.frameId) return reject(u, name, payload, `멈춘 프레임(${u.frameId})이 아니다`);
       const s = snapToSeam(u.frame.seam_px, payload.path_px);
       const snap = { suffix: 'task/snap', payload: { task_id: u.taskId, ok: s.ok, surface: u.frame.surface, path: toMm(u.frame.H, s.path_px), frame_id: u.frameId, frame_size: u.frame.size, path_px: s.path_px } };
-      if (!s.ok) return { accepted: true, out: [snap, alarm(u, 'info', 'SNAP_FAILED', '그린 선이 용접선에서 멀다. 다시 그린다')] };
+      if (!s.ok) return { accepted: true, out: [snap, alarm(u, 'info', 'SNAP_FAILED', '그린 선이 용접선에서 멀다. 다시 그린다', true, { alarm_id: `${u.cell}-snap` })] };
       u.proposal = { path_px: s.path_px, path: snap.payload.path, confidence: 0.97 };
       u.state = 'proposed';
-      return { accepted: true, out: [snap, stateMsg(u), proposalMsg(u)] };
+      return { accepted: true, out: [snap, stateMsg(u), proposalMsg(u), snapCleared(u)] };
+    }
+    case 'edit_cancel': {
+      // 그린 선을 버리고 수정 전 제안으로 돌아간다(제안은 수정 중에 바뀌지 않았다)
+      if (u.state !== 'editing') return reject(u, name, payload, `${u.state} 상태`);
+      u.state = 'proposed';
+      return { accepted: true, out: [stateMsg(u), proposalMsg(u), snapCleared(u)] };
     }
     case 'approve': {
       if (u.state !== 'proposed') return reject(u, name, payload, `${u.state} 상태`);

@@ -31,7 +31,8 @@ describe('UI-04 버튼 활성화 표', () => {
   it('상태별로 정해진 버튼만 눌린다', () => {
     expect(ids('idle')).toEqual(['estop']);
     expect(ids('proposed')).toEqual(['edit', 'approve', 'estop']);
-    expect(ids('editing')).toEqual(['estop']);
+    expect(ids('editing')).toEqual(['edit-cancel', 'estop']);
+    expect(ids('editing', true)).toEqual(['estop']);
     expect(ids('running')).toEqual(['estop']);
     expect(ids('completed')).toEqual(['confirm-rework', 'confirm-ok', 'estop']);
     expect(ids('paused')).toEqual(['resume', 'estop']);

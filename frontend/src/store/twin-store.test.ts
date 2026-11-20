@@ -52,6 +52,17 @@ describe('twin store', () => {
     expect(cell().progress).toBeNull();
   });
 
+  it('이미 받은 것보다 오래된 작업 상태·제안은 버린다(구독 직후 예전 retained가 늦게 오는 경합)', () => {
+    apply('task/state', { ts: 200, state: 'proposed', task_id: 't1' });
+    apply('task/proposal', { ts: 200, task_id: 't1', path: [[0, 0], [2, 2]] });
+    apply('task/state', { ts: 100, state: 'idle', task_id: null });
+    apply('task/proposal', { ts: 150, task_id: 't0', path: [[0, 0], [1, 1]] });
+    expect(cell().task?.state).toBe('proposed');
+    expect(cell().proposal?.task_id).toBe('t1');
+    apply('task/state', { ts: 200, state: 'running', task_id: 't1' });
+    expect(cell().task?.state, '같은 시각은 받는다').toBe('running');
+  });
+
   it('새 제안이 오면 이전 수렴 결과를 버린다', () => {
     apply('task/snap', { task_id: 't1', ok: true, path: [[0, 0], [1, 1]] });
     apply('task/proposal', { task_id: 't1', path: [[0, 0], [2, 2]] });

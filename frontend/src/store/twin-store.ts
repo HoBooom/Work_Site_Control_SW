@@ -95,14 +95,19 @@ export function reduceCell<S extends keyof CellTopicPayloads>(
     }
     case 'task/state': {
       const p = payload as CellTopicPayloads['task/state'];
+      // 이미 받은 것보다 오래된 상태는 버린다: 구독 직후 브로커가 예전 retained 값을 새 값 뒤에 보내는 경합이 있다
+      if (prev.task && p.ts < prev.task.ts) return prev;
       // 작업이 바뀌면 이전 작업의 경로·진행률을 버린다
       const changed = prev.task?.task_id !== p.task_id;
       return changed
         ? { ...prev, task: p, proposal: null, snap: null, progress: null }
         : { ...prev, task: p };
     }
-    case 'task/proposal':
-      return { ...prev, proposal: payload as TaskProposal, snap: null };
+    case 'task/proposal': {
+      const p = payload as TaskProposal;
+      if (prev.proposal && p.ts < prev.proposal.ts) return prev; // 위와 같은 경합
+      return { ...prev, proposal: p, snap: null };
+    }
     case 'task/snap':
       return { ...prev, snap: payload as TaskSnap };
     case 'task/progress':

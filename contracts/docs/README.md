@@ -46,7 +46,7 @@ innoworks/{site}/{cell}/task/progress    서버→웹  진행률, QoS 0
 innoworks/{site}/{cell}/vision/metrics   서버→웹  지연·신뢰도·외란 강도, QoS 0
 innoworks/{site}/{cell}/alarm            서버→웹  QoS 1
 innoworks/{site}/{cell}/status           서버→웹  online/offline, retained, LWT
-innoworks/{site}/{cell}/cmd/{이름}        웹→서버  edit_start, drag, approve, confirm, estop, resume. QoS 1
+innoworks/{site}/{cell}/cmd/{이름}        웹→서버  edit_start, edit_cancel, drag, approve, confirm, estop, resume. QoS 1
 innoworks/operator/{client_id}/heartbeat 웹→서버  1초마다, QoS 0
 ```
 

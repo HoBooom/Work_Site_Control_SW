@@ -71,6 +71,16 @@
       ]
     },
     {
+      "suffix": "cmd/edit_cancel",
+      "schema": "cmd-edit-cancel",
+      "dir": "web->server",
+      "qos": 1,
+      "retained": false,
+      "scopes": [
+        "cell"
+      ]
+    },
+    {
       "suffix": "cmd/drag",
       "schema": "cmd-drag",
       "dir": "web->server",

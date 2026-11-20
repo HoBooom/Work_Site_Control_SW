@@ -105,6 +105,29 @@ export interface CmdDrag {
 }
 
 /**
+ * 수정 취소. editing에서만 받는다. 그린 선을 버리고 수정 전 제안으로 돌아가 proposed(영상은 다시 실시간). 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/edit_cancel
+ */
+export interface CmdEditCancel {
+  v: 1;
+  /**
+   * epoch ms
+   */
+  ts: number;
+  /**
+   * 웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다
+   */
+  cmd_id: string;
+  /**
+   * 운영자 id(로그인 전에는 브라우저마다 만든 값)
+   */
+  operator: string;
+  /**
+   * 명령 대상 작업(서버가 발급한 task_id)
+   */
+  task_id: string;
+}
+
+/**
  * 수정 시작. proposed에서만 받는다. 서버가 지금 프레임을 멈추고 frame_id를 task/proposal로 알린다. 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/edit_start
  */
 export interface CmdEditStart {
@@ -541,6 +564,7 @@ export const CELL_TOPIC_SUFFIXES: readonly CellTopicSuffix[] = ['robot/state', '
 /** 명령 토픽 접미사(cmd/…) → payload 타입. 웹→서버 */
 export interface CommandPayloads {
   'cmd/edit_start': CmdEditStart;
+  'cmd/edit_cancel': CmdEditCancel;
   'cmd/drag': CmdDrag;
   'cmd/approve': CmdApprove;
   'cmd/confirm': CmdConfirm;
@@ -550,6 +574,6 @@ export interface CommandPayloads {
 
 export type CommandSuffix = keyof CommandPayloads;
 
-export const COMMAND_SUFFIXES: readonly CommandSuffix[] = ['cmd/edit_start', 'cmd/drag', 'cmd/approve', 'cmd/confirm', 'cmd/estop', 'cmd/resume'];
+export const COMMAND_SUFFIXES: readonly CommandSuffix[] = ['cmd/edit_start', 'cmd/edit_cancel', 'cmd/drag', 'cmd/approve', 'cmd/confirm', 'cmd/estop', 'cmd/resume'];
 /** 사이트 토픽({prefix}/{site}/{suffix})으로도 보낼 수 있는 명령(모든 로봇 대상) */
 export const SITE_COMMAND_SUFFIXES: readonly CommandSuffix[] = ['cmd/estop', 'cmd/resume'];

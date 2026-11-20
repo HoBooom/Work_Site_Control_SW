@@ -90,9 +90,24 @@ fi
 # L2 단위
 [ "$LEVEL" -ge 2 ] && step L2 "단위 테스트" npx vitest run --root frontend
 [ "$LEVEL" -ge 2 ] && step L2 "Mock 상태 머신" node --test tools/
+if [ "$LEVEL" -ge 2 ]; then
+  if [ -x server/.venv/bin/python ]; then
+    step L2 "서버 단위(pytest)" bash -c "cd server && .venv/bin/python -m pytest -q"
+  else
+    note L2 "서버 단위(pytest)" "server/.venv가 없다(uv sync --project server)"
+  fi
+fi
 
 # L3 씬 상태, L4 스크린샷
 [ "$LEVEL" -ge 3 ] && step L3 "씬 상태" pw L3 --grep @L3
+# 같은 관제 화면 검사를 실제 서버(server/, Mock 어댑터)로 한 번 더(F5, ADR 0007)
+if [ "$LEVEL" -ge 3 ]; then
+  if [ -x server/.venv/bin/python ]; then
+    step L3 "관제(파이썬 서버)" env WELD_SERVER=python PW_OUTPUT_DIR=./out/test-results/L3-server npx playwright test -c "$PW_CONFIG" app.spec.ts
+  else
+    note L3 "관제(파이썬 서버)" "server/.venv가 없다(uv sync --project server)"
+  fi
+fi
 if [ "$LEVEL" -ge 4 ]; then
   if [ "$CANDIDATES" = 1 ]; then
     rm -rf "$OUT/review"

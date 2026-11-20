@@ -18,18 +18,17 @@
 
 ```
 frontend/src/
-├─ app/       관제 웹앱(/): 브로커에 붙은 실시간 트윈 + 연결 상태. 사이드 패널은 서버 단계에서
-├─ bus/       MQTT 연결·재연결, 구독, 계약 스키마 검증(mqtt-bus.ts, validate.ts). 발행(cmd/*)은 서버 단계에서
-├─ store/     Zustand. 셀별 상태(task, joints, alarms, metrics, 연결 상태)
+├─ app/       관제 웹앱(/): 화면 틀(상태 줄·패널·손잡이·트윈·하단 독), bus 연결, heartbeat, window.__app
+├─ bus/       MQTT 연결·재연결, 구독, 계약 스키마 검증, 명령 발행(cmd/*, 보내기 전에 계약 검사), heartbeat
+├─ store/     Zustand. 셀별 상태(task, 제안·수렴, 진행률, joints, alarms, metrics, 연결 상태)
 ├─ scene/     R3F 씬: 배경 GLB, 로봇(URDF), 작업판, 용접선, 마커, 카메라 프리셋, 선택
 ├─ lab/       트윈 랩: 씬만 띄우는 개발용 화면, 픽스처 재생기, window.__twin. 로봇 랩(/lab/robot): 로봇 하나와 관절 슬라이더
-├─ panel/     카메라 뷰, canvas 오버레이, 수정 모드, 작업 제어
-├─ alarms/    알람 목록, 읽음 처리
-├─ metrics/   추론 지연·신뢰도·외란 강도 표시
-└─ shared/    좌표 변환, 공통 UI
+├─ panel/     로봇 목록·로봇 패널, 카메라 뷰, canvas 오버레이, 수정 모드(그리기), 작업 제어 버튼, 2D 상태 색(ui-state.ts)
+├─ alarms/    알람 카드(활성 알람, 심각도순·최신순, 누르면 그 로봇)
+└─ metrics/   신뢰도·추론 지연·외란 강도 칸
 ```
 
-의존 방향: `scene / panel / alarms / metrics → store → bus`. 화면 컴포넌트는 MQTT를 직접 만지지 않는다.
+의존 방향: `scene / panel / alarms / metrics → store → bus`. 화면 컴포넌트는 MQTT를 직접 만지지 않는다(명령은 app이 넘겨준 bus로만).
 
 ## 데이터 흐름
 
@@ -55,16 +54,7 @@ frontend/src/
 
 서버 전 프론트 단계의 기능명세·검증·마일스톤(F0~F5)은 [spec.md](spec.md). 서버 자리는 MQTT Mock 서버, 카메라 자리는 임의의 사진이다.
 
-디지털 트윈을 먼저 개발한다. 그동안은 `store/`의 최소 조각, `scene/`, 트윈 랩(`lab/`)만 만들고, `bus/` 자리에는 픽스처 재생기를 둔다(`digital-twin/docs/spec.md`). 아래 순서는 트윈 M4 이후에 1번부터 이어 간다. 3번은 그때 이미 끝나 있다.
-
-1. `bus/` + `store/`: Mock 서버의 상태를 받아 콘솔에 찍기
-2. `panel/`: 영상 + 붉은 선 + 승인·확인 버튼 (핵심 흐름 먼저)
-3. `scene/`: 배경 GLB, 로봇이 `robot/state`를 따라 움직이기
-4. 선택(로봇·알람 클릭 → 패널), `alarms/`
-5. 수정 모드(프레임 정지, 드래그, 수렴 결과 표시)
-6. 긴급정지, 연결 상태 표시
-7. `metrics/`
-8. 사이트 전환, 카메라 프리셋, 태블릿 대응
+1~8번(bus·store, 패널, 씬, 선택·알람, 수정 모드, 긴급정지·연결 상태, 메트릭, 카메라 프리셋·태블릿)은 F0~F4로 끝났다(2026-11-19). 사이트는 주소의 `?site=` 또는 `VITE_DEFAULT_SITE`로 고른다(Mock 서버가 한 번에 한 사이트를 돌린다). 남은 것은 태블릿 사람 확인과 F5(실제 서버·카메라)다.
 
 ## 다음에 쪼갤 문서
 

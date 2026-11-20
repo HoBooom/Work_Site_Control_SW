@@ -1,9 +1,9 @@
 // L3 관제 화면(F0, frontend/docs/spec.md): 배치, 로봇 목록·선택, 패널 영상, 긴급정지(전체·로봇별)·재개.
-// 브로커(aedes)와 Mock 서버(tools/mock-server.mjs)를 이 검사가 빈 포트에 띄운다.
+// 브로커(aedes)와 서버를 이 검사가 빈 포트에 띄운다. 서버는 Node Mock(기본) 또는 관제 서버(WELD_SERVER=python, tools/server-under-test.mjs).
 import { expect, test, type Page } from '@playwright/test';
 import mqtt from 'mqtt';
 import { startBroker, type Broker } from '../../../infra/broker.mjs';
-import { startMockServer, type MockServer } from '../../../tools/mock-server.mjs';
+import { startMockServer, type MockServer } from '../../../tools/server-under-test.mjs';
 
 const SITE = 'ship-block';
 const CELLS = ['spider-1', 'spider-2'];
@@ -89,6 +89,25 @@ test.describe('관제 화면 @L3', () => {
     await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth), { message: '영상(Mock 사진)이 로드된다' }).toBe(1280);
     await page.getByRole('button', { name: '로봇 목록으로' }).click();
     await expect(page.getByTestId('robot-list')).toBeVisible();
+    // 패널의 로봇 카드로 골라도 같은 선택이 된다(하단 독, 알람, 트윈 클릭과 같다. 트윈 클릭은 interaction.spec)
+    await expect(page.getByTestId('robot-card-spider-2')).toHaveAttribute('data-state', 'proposed');
+    await page.getByTestId('robot-card-spider-2').click();
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-cell', 'spider-2');
+    expect(await page.evaluate(() => window.__app!.selection())).toEqual({ site: SITE, cell: 'spider-2', kind: 'robot', id: 'spider-2' });
+    await expect(rowState(page, 'spider-2')).toHaveAttribute('aria-pressed', 'true');
+    app.expectClean();
+  });
+
+  test('목표 1.2: 승인하면 트윈의 로봇이 움직이고(robot/state) 3D 라벨이 실행 중, 끝나면 확인 대기', async ({ page }) => {
+    const app = await openApp(page);
+    await expect(rowState(page, 'spider-1')).toHaveAttribute('data-state', 'proposed');
+    await rowState(page, 'spider-1').click();
+    const joints = () => page.evaluate(() => JSON.stringify(window.__app!.cells()['ship-block/spider-1'].joints));
+    const before = await joints();
+    await page.getByTestId('btn-approve').click();
+    await expect(page.getByTestId(`cell-label-${SITE}-spider-1`)).toContainText('실행 중');
+    await expect.poll(joints, { message: '실행 중에 관절이 움직인다' }).not.toBe(before);
+    await expect(page.getByTestId(`cell-label-${SITE}-spider-1`)).toContainText('확인 대기');
     app.expectClean();
   });
 
@@ -125,6 +144,33 @@ test.describe('관제 화면 @L3', () => {
     await page.getByRole('button', { name: '로봇 목록으로' }).click();
     await page.getByTestId('alarm-row-spider-2-estop').click();
     await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-cell', 'spider-2');
+    app.expectClean();
+  });
+
+  test('UI-09: 받은 메트릭(신뢰도·추론 지연·외란)이 패널에 보이고, 새 값이 오면 바뀐다', async ({ page }) => {
+    const app = await openApp(page);
+    await expect(rowState(page, 'spider-1')).toHaveAttribute('data-state', 'proposed');
+    await rowState(page, 'spider-1').click();
+    const shown = async () => {
+      const m = await page.evaluate(() => window.__app!.cells()['ship-block/spider-1'].metrics);
+      const ui = await page.evaluate(() => ({
+        latency: document.querySelector('[data-testid="unit-latency"]')?.textContent,
+        disturbance: document.querySelector('[data-testid="unit-disturbance"]')?.textContent,
+      }));
+      return { m, ui };
+    };
+    await expect.poll(async () => (await shown()).m != null).toBe(true);
+    const first = await shown();
+    expect(first.ui.latency).toBe(`${Math.round(first.m!.latency_ms)}ms`);
+    expect(first.ui.disturbance).toBe(`${Math.round(first.m!.disturbance * 100)}%`);
+    await expect(page.getByTestId('unit-confidence')).toHaveText('88%');
+    // Mock은 1초마다 새 값을 보낸다: 화면이 받은 값을 따라간다
+    await expect
+      .poll(async () => {
+        const now = await shown();
+        return now.m!.latency_ms !== first.m!.latency_ms && now.ui.latency === `${Math.round(now.m!.latency_ms)}ms`;
+      })
+      .toBe(true);
     app.expectClean();
   });
 
@@ -348,6 +394,33 @@ test.describe('관제 화면 @L3', () => {
     await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-pending', '0');
     await drawWithMouse(page, [seam[1], seam[5], seam[10]]);
     await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'proposed');
+    await expect(page.getByTestId('alarm-list'), '수렴에 성공하면 실패 알람이 풀린다').not.toContainText('그린 선이 용접선에서 멀다');
+    app.expectClean();
+  });
+
+  test('UI-05: 수정 취소 → 그린 선을 버리고 수정 전 제안(같은 작업·같은 경로)으로 돌아간다', async ({ page }) => {
+    const app = await openApp(page);
+    await expect(rowState(page, 'spider-1')).toHaveAttribute('data-state', 'proposed');
+    const before = await page.evaluate(() => window.__app!.cells()['ship-block/spider-1'].proposal);
+    await startEdit(page, 'spider-1');
+    await expect(page.getByTestId('btn-approve'), '수정 중에는 승인 버튼이 없다').toHaveCount(0);
+    const { cam } = await seamOnScreen(page, 'spider-1');
+    await drawWithMouse(page, [
+      [cam.x + cam.width * 0.2, cam.y + cam.height * 0.92],
+      [cam.x + cam.width * 0.8, cam.y + cam.height * 0.92],
+    ]);
+    await expect(page.getByTestId('alarm-list')).toContainText('그린 선이 용접선에서 멀다');
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-pending', '0');
+    await page.getByTestId('btn-edit-cancel').click();
+    await expect(page.getByTestId('unit-panel')).toHaveAttribute('data-state', 'proposed');
+    await expect(page.getByTestId('camera')).toHaveAttribute('data-mode', 'view');
+    const after = await page.evaluate(() => window.__app!.cells()['ship-block/spider-1'].proposal);
+    expect(after!.task_id).toBe(before!.task_id);
+    expect(after!.path_px).toEqual(before!.path_px);
+    await expect(page.getByTestId('alarm-list')).not.toContainText('그린 선이 용접선에서 멀다');
+    await expect(page.getByTestId('btn-approve')).toBeEnabled();
+    const sent = (await page.evaluate(() => window.__app!.sent())).map((x) => x.suffix);
+    expect(sent).toEqual(['cmd/edit_start', 'cmd/drag', 'cmd/edit_cancel']);
     app.expectClean();
   });
 

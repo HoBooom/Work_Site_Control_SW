@@ -41,7 +41,8 @@
 | 명령 | 받는 상태 | 결과 |
 | --- | --- | --- |
 | `edit_start` | proposed | editing. 서버가 지금 프레임을 멈춰 `frame_id`로 알린다 |
-| `drag` | editing | 서버가 경로를 수렴시켜 `task/snap`을 보내고, 성공이면 그 경로로 다시 proposed |
+| `edit_cancel` | editing | 그린 선을 버리고 수정 전 제안으로 proposed(2026-11-19 추가) |
+| `drag` | editing | 서버가 경로를 수렴시켜 `task/snap`을 보내고, 성공이면 그 경로로 다시 proposed. 실패면 editing 그대로 + 알람(SNAP_FAILED, id `{cell}-snap`, 수정 모드를 나가면 해제) |
 | `approve` | proposed | running. 로봇이 경로를 따라 용접, `task/progress` |
 | `confirm` | completed | 결과(합격·재작업)를 기록하고 idle. 재작업이면 같은 자리를 다시 제안 |
 | `estop` | 아무 상태 | estopped + 치명 알람. 셀 토픽이면 그 로봇만, 사이트 토픽 `innoworks/{site}/cmd/estop`이면 모든 로봇 |
@@ -51,13 +52,13 @@
 - 웹 heartbeat(1초)가 3초 넘게 끊기면 running 로봇을 paused로(HEARTBEAT_LOST 알람, id `{cell}-heartbeat`). heartbeat를 한 번도 받지 못했으면(운영자 화면이 없으면) 판정하지 않는다. resume하면 그 알람을 해제한다.
 - 로봇 서버가 비정상 종료하면 브로커가 셀마다 유언 `status=offline`을 보낸다. 정상 종료도 `offline`을 보낸다. 브로커에 다시 붙으면 서버는 `status=online`과 지금 상태(task/state, 제안)를 다시 보낸다(브로커가 다시 떠 retained가 비었을 수 있다).
 - 화면: 브로커가 끊기면 트윈을 회색으로 바꾸고 안내 띠를 띄운다(마지막 상태는 그대로 보인다). 로봇 서버가 모두 오프라인이면 "로봇 서버와 끊겼다" 띠, 오프라인 로봇은 버튼을 막는다.
-- 이 표는 서버 단계의 `server/docs/state-machine.md`로 옮긴다. Mock과 서버가 같은 표를 따른다.
+- 이 표는 `server/docs/state-machine.md`로 옮겼다(서버는 정지 뒤 남은 경로를 다시 제안한다). Mock과 서버가 같은 표를 따른다.
 
 ## 4. 계약에 더할 것(contracts부터 고친다)
 
 | 무엇 | 내용 |
 | --- | --- |
-| `cmd-*` 스키마 6개(긴급정지·재개는 셀 토픽과 사이트 토픽 둘 다) | 공통 `v, ts, cmd_id(웹이 만든 uuid), operator`. `task_id`(estop 제외). `drag`: `frame_id`, `path_px`([[x, y]...], 원본 프레임 픽셀). `confirm`: `result`(ok, rework) |
+| `cmd-*` 스키마 7개(edit_start, edit_cancel, drag, approve, confirm, estop, resume. 긴급정지·재개는 셀 토픽과 사이트 토픽 둘 다) | 공통 `v, ts, cmd_id(웹이 만든 uuid), operator`. `task_id`(estop 제외). `drag`: `frame_id`, `path_px`([[x, y]...], 원본 프레임 픽셀). `confirm`: `result`(ok, rework) |
 | `task/proposal`, `task/snap` | 선택 필드 `frame_id`, `path_px`, `frame_size`([w, h]). 패널은 픽셀 경로를, 트윈은 mm 경로를 그린다 |
 | `alarm` | 선택 필드 `cmd_id`(어느 명령이 거부됐는지) |
 | `vision/metrics` | `latency_ms`, `confidence`, `disturbance`(0~1) |
@@ -97,8 +98,8 @@
 | L0 | 계약 예시(cmd 포함), 타입, lint |
 | L2 | 버튼 활성화 표, 경로 픽셀 변환, Mock 상태 머신(모든 전이와 거부) |
 | L3 | 시나리오: 제안 → 승인 → 완료 → 확인, 수정(드래그 → 수렴 → 재승인), 거부 알람, 긴급정지·재개, heartbeat 끊김, 브로커 끊김·복구. `window.__app`으로 상태를 확인한다 |
-| L4 | 패널 상태별 기준 화면(제안, 수정 중, 실행 중, 완료, 긴급정지)과 태블릿 크기 |
-| H | 태블릿에서 터치로 수정하기 |
+| L4 | 패널 상태별 기준 화면(제안, 수정 중, 수렴 실패, 실행 중, 완료, 긴급정지)과 태블릿 가로·세로. Mock은 메트릭을 고정값으로 보내고(`fixedMetrics`), 실행 중은 진행률 0%에 머물게 아주 길게 돌린다 |
+| H | 태블릿에서 터치로 수정하기. 맥과 같은 네트워크에서 `LAN=1 npm run dev` → 태블릿 브라우저로 `http://<맥 IP>:5173/` |
 
 ## 8. 마일스톤
 
@@ -108,8 +109,8 @@
 | F1 | 핵심 흐름: 선택 → 패널 → 영상+경로 → 승인 → 진행 → 확인 | 시나리오 L3 통과(완료 2026-11-19) |
 | F2 | 수정 모드(정지 프레임, 드래그, 수렴) | 수정 시나리오 L3, 기준 화면 승인(완료 2026-11-19) |
 | F3 | 긴급정지·재개, 알람 목록, 연결 상태, heartbeat | 해당 L3(완료 2026-11-19) |
-| F4 | 메트릭, 태블릿·세로 배치 | L4 승인, 태블릿 사람 확인 |
-| F5(나중) | 실제 카메라·로봇: 서버 단계에서 Mock 서버를 FastAPI 서버로 바꾼다 | 같은 L3가 실제 서버로 통과 |
+| F4 | 메트릭, 태블릿·세로 배치 | L4 승인, 태블릿 사람 확인(L3·L4 2026-11-19, 태블릿 사람 확인 남음) |
+| F5 | 실제 카메라·로봇: 서버 단계에서 Mock 서버를 FastAPI 서버로 바꾼다 | 같은 L3가 실제 서버로 통과. 서버(Mock 어댑터)로 통과(2026-11-20, ADR 0007). 실제 장비 연결은 남음 |
 
 ## 9. 정해지지 않은 것
 

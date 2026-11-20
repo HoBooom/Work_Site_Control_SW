@@ -4,7 +4,7 @@ export interface MockServer {
   close(): Promise<void>;
   kill(): void;
 }
-export function startMockServer(opts?: {
+export interface MockServerOptions {
   site?: string;
   url?: string;
   httpPort?: number;
@@ -13,5 +13,8 @@ export function startMockServer(opts?: {
   runMs?: number;
   heartbeatTimeoutMs?: number;
   tickMs?: number;
+  /** 메트릭을 고정값(지연 70ms, 외란 12%)으로 보낸다. 기준 화면용 */
+  fixedMetrics?: boolean;
   log?: boolean;
-}): Promise<MockServer>;
+}
+export function startMockServer(opts?: MockServerOptions): Promise<MockServer>;

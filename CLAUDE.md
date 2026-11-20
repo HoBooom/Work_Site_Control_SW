@@ -47,20 +47,21 @@ docs/           adr/ (구획을 넘는 설계 결정만)
 
 ```
 npm install                                   # 저장소 루트에서 한 번
-npm run dev                                   # infra/dev.sh: 브로커(aedes, 1883/9001) + Mock 서버(명령에 답한다) + 프론트
-npm run dev -- play ship-block-weld           # Mock 서버 대신 픽스처를 반복 재생
+uv sync --project server                      # 서버 가상환경(server/.venv) 한 번
+npm run dev                                   # infra/dev.sh: 브로커(aedes, 1883/9001) + 관제 서버(server/, Mock 어댑터) + 프론트
+npm run dev -- mock                           # 서버 대신 Node Mock 서버(tools/mock-server.mjs)
+npm run dev -- play ship-block-weld           # 서버 대신 픽스처를 반복 재생
+LAN=1 npm run dev                             # 같은 네트워크의 태블릿에서 http://<맥 IP>:5173/ 로 연다
 npm run play -- <픽스처> [--speed 2]           # 픽스처 한 번 재생(브로커가 떠 있어야 한다)
 npm run dev -w frontend                       # 프론트만(픽스처 트윈 랩)
-digital-twin/harness/check.sh                 # 트윈 검사 L0~L4 (/twin-check)
+npm run server -- --site ship-block           # 서버만(옵션 server/docs/mock.md)
+npm run test:server                           # 서버 단위 검사(pytest)
+digital-twin/harness/check.sh                 # 트윈·관제·서버 검사 L0~L4 (/twin-check)
 digital-twin/harness/shot.sh "<랩 주소 인자>"   # 장면 한 장 (/twin-shot)
 ```
 
-프론트(서버 전): 기능명세 `frontend/docs/spec.md`, F0~F3 완료(ADR 0005, 화면 디자인 ADR 0006). 다음은 F4 메트릭·태블릿.
+프론트(서버 전): 기능명세 `frontend/docs/spec.md`, F0~F3 완료(ADR 0005, 화면 디자인 ADR 0006). F4는 메트릭·태블릿 기준 화면까지, 태블릿 사람 확인이 남았다.
 
 화면: 관제 `http://localhost:5173/`(기본 사이트 ship-block, 브로커·Mock 서버. 디자인 시안 Welding Control v3 + `frontend/DESIGN.md`, ADR 0006), 트윈 랩 `/lab`(픽스처) 또는 `/lab?site=ship-block&source=mqtt`(브로커), 로봇 랩 `/lab/robot`.
 
-나중에 생길 명령:
-
-```
-infra/dev.sh          # 위에 server(--mock vision,robot,camera)를 더한다
-```
+서버(ADR 0007): Python FastAPI, Mock 어댑터(vision·robot·camera)로 끝까지 동작하고 관제 L3를 Node Mock 서버와 같이 통과한다. 실제 비전·로봇·카메라 연결(팀원 코드)과 Jetson 실행 확인이 남았다.

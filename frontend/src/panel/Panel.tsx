@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { CommandPayloads, SiteConfig } from '../contracts/messages.gen';
 import { useBus } from '../app/bus-context';
+import { MetricTiles } from '../metrics/MetricTiles';
 import { CameraView } from './CameraView';
 import { HINT, controlsFor, type ControlId } from './controls';
 import { cellVisualState } from '../scene/cell-view';
@@ -91,6 +92,9 @@ function UnitPanel({ config, cellId, name }: { config: SiteConfig; cellId: strin
       case 'edit':
         cmdId = bus.command(cellId, 'cmd/edit_start', { task_id });
         break;
+      case 'edit-cancel':
+        cmdId = bus.command(cellId, 'cmd/edit_cancel', { task_id });
+        break;
       case 'confirm-ok':
         cmdId = bus.command(cellId, 'cmd/confirm', { task_id, result: 'ok' });
         break;
@@ -123,6 +127,7 @@ function UnitPanel({ config, cellId, name }: { config: SiteConfig; cellId: strin
   // 주 동작(파랑)은 승인·합격. 재개는 어두운 버튼, 나머지는 흰 버튼(디자인 v3)
   const CLASS: Record<ControlId, string> = {
     edit: 'btn btn-secondary',
+    'edit-cancel': 'btn btn-secondary',
     approve: 'btn btn-primary btn-wide',
     'confirm-rework': 'btn btn-secondary',
     'confirm-ok': 'btn btn-primary btn-wide',
@@ -179,29 +184,7 @@ function UnitPanel({ config, cellId, name }: { config: SiteConfig; cellId: strin
 
         <CameraView site={site} cellId={cellId} name={name} onDraw={sendDrag} drawPending={pending?.kind === 'drag'} />
 
-        <div className="tiles">
-          <div className="tile">
-            <div className="tile-label">신뢰도</div>
-            <div className="tile-value" data-testid="unit-confidence">
-              {confidence ?? '–'}
-              <span className="tile-unit">%</span>
-            </div>
-          </div>
-          <div className="tile" data-testid="unit-live">
-            <div className="tile-label">추론 지연</div>
-            <div className="tile-value">
-              {c?.metrics ? Math.round(c.metrics.latency_ms) : '–'}
-              <span className="tile-unit">ms</span>
-            </div>
-          </div>
-          <div className="tile" data-testid="unit-live">
-            <div className="tile-label">외란 강도</div>
-            <div className="tile-value">
-              {c?.metrics ? Math.round(c.metrics.disturbance * 100) : '–'}
-              <span className="tile-unit">%</span>
-            </div>
-          </div>
-        </div>
+        <MetricTiles cell={c} />
       </div>
 
       <div className="unit-foot">

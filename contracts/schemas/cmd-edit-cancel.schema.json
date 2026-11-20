@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "cmd-edit-cancel",
+  "title": "CmdEditCancel",
+  "description": "수정 취소. editing에서만 받는다. 그린 선을 버리고 수정 전 제안으로 돌아가 proposed(영상은 다시 실시간). 웹→서버, QoS 1, retained 금지. 토픽: innoworks/{site}/{cell}/cmd/edit_cancel",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "ts",
+    "cmd_id",
+    "operator",
+    "task_id"
+  ],
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "epoch ms"
+    },
+    "cmd_id": {
+      "type": "string",
+      "minLength": 8,
+      "description": "웹이 만든 명령 id(uuid). 거부 알람이 이 값을 돌려준다"
+    },
+    "operator": {
+      "type": "string",
+      "minLength": 1,
+      "description": "운영자 id(로그인 전에는 브라우저마다 만든 값)"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "명령 대상 작업(서버가 발급한 task_id)"
+    }
+  }
+}

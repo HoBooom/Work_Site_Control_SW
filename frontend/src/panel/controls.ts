@@ -1,6 +1,6 @@
 import type { CellVisualState } from '../scene/cell-view';
 
-export type ControlId = 'edit' | 'approve' | 'confirm-ok' | 'confirm-rework' | 'resume' | 'estop';
+export type ControlId = 'edit' | 'edit-cancel' | 'approve' | 'confirm-ok' | 'confirm-rework' | 'resume' | 'estop';
 
 export interface Control {
   id: ControlId;
@@ -18,6 +18,9 @@ export function controlsFor(state: CellVisualState, pending: boolean, connected:
   switch (state) {
     case 'proposed':
       out.push({ id: 'edit', label: '수정', enabled: can(true) }, { id: 'approve', label: '승인하고 용접 시작', enabled: can(true) });
+      break;
+    case 'editing':
+      out.push({ id: 'edit-cancel', label: '수정 취소', enabled: can(true) });
       break;
     case 'completed':
       out.push({ id: 'confirm-rework', label: '재작업', enabled: can(true) }, { id: 'confirm-ok', label: '합격', enabled: can(true) });

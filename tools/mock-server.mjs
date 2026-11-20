@@ -68,10 +68,11 @@ function motionTime(motion, u) {
 }
 
 /**
- * @param {{ site?: string, url?: string, httpPort?: number, proposeMs?: number, runMs?: number, heartbeatTimeoutMs?: number, tickMs?: number, log?: boolean }} [opts]
+ * fixedMetrics: 메트릭(추론 지연·외란)을 시각에 따라 바꾸지 않고 고정값으로 보낸다(기준 화면을 찍을 때)
+ * @param {{ site?: string, url?: string, httpPort?: number, proposeMs?: number, runMs?: number, heartbeatTimeoutMs?: number, tickMs?: number, fixedMetrics?: boolean, log?: boolean }} [opts]
  */
 export async function startMockServer(opts = {}) {
-  const { site = 'ship-block', url = 'mqtt://localhost:1883', httpPort = 8090, proposeMs = 1500, runMs, heartbeatTimeoutMs = 3000, tickMs = 100, log = false } = opts;
+  const { site = 'ship-block', url = 'mqtt://localhost:1883', httpPort = 8090, proposeMs = 1500, runMs, heartbeatTimeoutMs = 3000, tickMs = 100, fixedMetrics = false, log = false } = opts;
   const mock = readJson('tools/mock/sites.json')[site];
   if (!mock) throw new Error(`tools/mock/sites.json에 ${site}가 없다`);
   const config = readJson(`digital-twin/site-config/${site}.json`);
@@ -145,7 +146,7 @@ export async function startMockServer(opts = {}) {
   const metricsTimer = setInterval(() => {
     if (stopped) return;
     for (const [cell, u] of units) {
-      const t = Date.now() / 1000;
+      const t = fixedMetrics ? 0 : Date.now() / 1000; // t=0이면 지연 70ms, 외란 0.12
       send(cell, {
         suffix: 'vision/metrics',
         payload: {

@@ -61,7 +61,10 @@
   .app-main { flex-direction: column-reverse; gap: 10px; }
   .app-grip { display: none; }
   .app-panel { width: auto; flex: 1; min-height: 0; }
-  .app-scene { flex: none; height: 40vh; }
+  .app-scene { flex: none; height: 34vh; }
+  /* 패널이 넓어져도 영상(16:9)이 패널 안에 다 들어오게 폭을 높이에 맞춘다.
+     520px = 화면 여백·상태 줄·하단 독·패널 머리·큰 숫자·안내 띠·버튼 높이의 합 */
+  .app-panel .camera { width: min(100%, max(320px, calc((66vh - 520px) * 16 / 9))); align-self: center; }
 }
 
 /* 트윈 위 프리셋(반투명) */
